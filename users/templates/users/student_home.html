@@ -1,4 +1,109 @@
-{% extends "main.html" %} {% block content %}
-<h1>{{student.user.username}}</h1>
-<h2>Welcome my {{student.role.name}}</h2>
+{% extends "main.html" %} {% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+  <div class="container-lg">
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Выбор научного руководителя</strong>
+      </div>
+      <div class="card-body">
+        <div class="example">
+          <div class="tab-content rounded-bottom">
+            <div
+              class="tab-pane p-3 active preview"
+              role="tabpanel"
+              id="preview-234"
+            >
+              <div class="row align-items-center justify-content-between">
+                <div class="col">ФИО научрука</div>
+                <div class="col-auto">
+                  <button class="btn btn-danger" type="button">
+                    Не выбран
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Научно-исследовательская работа</strong>
+      </div>
+      <div class="card-body">
+        <div class="example">
+          <div class="tab-content rounded-bottom">
+            <div
+              class="tab-pane p-3 active preview"
+              role="tabpanel"
+              id="preview-946"
+            >
+              <div class="row">
+                <div class="col-xl-4">
+                  <div
+                    class="card text-white bg-info mb-3 clickable-card"
+                    data-href="{% url 'upload' %}"
+                  >
+                    <div class="card-header">НИР</div>
+                    <div class="card-body">
+                      <h5 class="card-title">Тема НИР</h5>
+                      <p class="card-text">Загрузите файл</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-4">
+                  <div class="card text-white bg-info mb-3">
+                    <div class="card-header">НИР</div>
+                    <div class="card-body">
+                      <h5 class="card-title">Задание</h5>
+                      <p class="card-text">Загрузите задание</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-4">
+                  <div class="card text-white bg-info mb-3">
+                    <div class="card-header">НИР</div>
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        Расширенная пояснительная записка
+                      </h5>
+                      <p class="card-text">Загрузите РСПЗ</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xl-4">
+                  <div class="card text-white bg-info mb-3">
+                    <div class="card-header">НИР</div>
+                    <div class="card-body">
+                      <h5 class="card-title">Пояснительная записка</h5>
+                      <p class="card-text">Загрузите ПЗ</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableCards = document.querySelectorAll(".clickable-card");
+    clickableCards.forEach((card) => {
+      card.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
+      });
+    });
+  });
+</script>
 {% endblock content %}

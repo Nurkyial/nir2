@@ -1,5 +1,85 @@
-{% extends "main.html" %} {% block content %} {% if page == 'login' %}
-<div>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/css/coreui.min.css"
+      rel="stylesheet"
+      integrity="sha384-KGkYqG3gD435LMZAC/8byquZiD5665LheNozmHAqp8vrOKBaBL/bFUO5Er5tMRNi"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/js/coreui.bundle.min.js"
+      integrity="sha384-Wl6mLWl+C0OgKzQqXtoEXuTkm2RwXManFDTNyMRxPR5zh3DFIUIDhq7Fp1JCFm1V"
+      crossorigin="anonymous"
+    ></script>
+    <title>NIR</title>
+  </head>
+
+  <body>
+    {% if page == 'login' %}
+    <div class="bg-light min-vh-100 d-flex flex-row align-items-center">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="card-group d-block d-md-flex row">
+              <div class="card col-md-7 p-4 mb-0">
+                <div class="card-body">
+                  <h1>Login</h1>
+                  <p class="text-medium-emphasis">Sign In to your account</p>
+                  <form method="POST" action="">
+                    {% csrf_token %}
+                    <div class="input-group mb-3">
+                      <span class="input-group-text">
+                        <svg class="icon">
+                          <use
+                            xlink:href="vendors/@coreui/icons/svg/free.svg#cil-user"
+                          ></use></svg
+                      ></span>
+                      <input
+                        class="form-control"
+                        type="text"
+                        name="username"
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div class="input-group mb-4">
+                      <span class="input-group-text">
+                        <svg class="icon">
+                          <use
+                            xlink:href="vendors/@coreui/icons/svg/free.svg#cil-lock-locked"
+                          ></use></svg
+                      ></span>
+                      <input
+                        class="form-control"
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                      />
+                    </div>
+                    <div class="row">
+                      <div class="col-6">
+                        <button class="btn btn-primary px-4" type="submit">
+                          Login
+                        </button>
+                      </div>
+                      <div class="col-6 text-end">
+                        <button class="btn btn-link px-0" type="button">
+                          Forgot password?
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  {% comment %}
   <form method="POST" action="">
     {% csrf_token %}
     <label>Username</label>
@@ -8,14 +88,7 @@
     <input type="Password" name="password" placeholder="Enter password" />
     <input type="submit" value="login" />
   </form>
-</div>
-{% else %}
-<div>
-  <form method="POST" action="">
-    {% csrf_token %} {{form.as_p}}
-    <input type="submit" value="Register" />
-  </form>
-  <p>Already signed up yet?</p>
-  <a href="{% url 'login' %}">Login</a>
-</div>
-{% endif %} {% endblock content %}
+  {% endcomment %} {% else %}
+  <h1>Error signing in!!!</h1>
+  {% endif %}
+</html>

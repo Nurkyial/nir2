@@ -38,24 +38,12 @@ def logoutUser(request):
     logout(request)
     return redirect('login')
     
-    
-def registerPage(request):
-    form = UserCreationForm()
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.username = user.username.lower()
-            user.save()
-            login(request, user)
-            return redirect('student-home', pk=request.user.userprofile.pk)
-        else:
-            messages.error(request, 'An error occured during registration')
-    context = {'form':form}
-    return render(request, 'users/login_register.html', context)
 
 def student_home(request, pk):
     student = get_object_or_404(UserProfile, user__id=pk)
     context = {'student':student}
     return render(request, 'users/student_home.html', context)
+
+def upload_page(request):
+    return render(request, 'users/upload_file.html')
     
