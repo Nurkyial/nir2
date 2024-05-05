@@ -1,10 +1,13 @@
 from django.shortcuts import render, get_object_or_404
 from .models import UserProfile, Group
+from base.models import File, ResearchWork, Submission, Topic, Assignment
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import render, redirect
+from django.core.files.storage import FileSystemStorage
+import datetime
 
 # Create your views here.
 def loginPage(request):
@@ -41,9 +44,50 @@ def logoutUser(request):
 
 def student_home(request, pk):
     student = get_object_or_404(UserProfile, user__id=pk)
-    context = {'student':student}
+    research_works = ResearchWork.objects.all()
+    semester = ['1', '2', '3', '4', '5', '6', '7', '8']
+    submissions = Submission.objects.filter(assignment__student=student)
+    context = {'research_works':research_works, 'semester':semester, 'student':student, 'submissions': submissions}
+    
+    if request.method == 'POST':  
+        research_work_id = request.POST.get('research_work_id')  
+        semester = request.POST.get('semester')
+        if research_work_id and semester:
+            research_work = ResearchWork.objects.get(id=research_work_id)
+            assignment = Assignment.objects.get(student=student)
+            
+            Submission.objects.create(
+                assignment = assignment,
+                semester = semester,
+                research_work = research_work
+            )
+            messages.success(request, 'Submission successfully created')
+
+            return redirect('student-home', pk=pk)
+        else:
+             messages.success(request, 'Invalid submission')
+        
     return render(request, 'users/student_home.html', context)
 
 def upload_page(request):
     return render(request, 'users/upload_file.html')
+
+def upload_file(request):
+    if request.method == 'POST':
+        request_file = request.FILES.get('document') if 'document' in request.FILES else None
+        if request_file: 
+            fs = FileSystemStorage()
+            filename = fs.save(request_file.name, request_file)
+            fileurl = fs.url(filename)
+            context = {'fileurl':fileurl}
+            
+            filedata = File.objects.create(
+                filename = request_file.name,
+                created_at = fs.get_created_time(filename)
+            )  
+            return render(request, 'users/upload_file.html', context)
+    return render(request, 'users/upload_file.html')
+
+
+
     

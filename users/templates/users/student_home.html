@@ -35,75 +35,73 @@
 
     <div class="card mb-4">
       <div class="card-header">
-        <strong>Научно-исследовательская работа</strong>
+        <strong>Выбор работы</strong>
       </div>
+
       <div class="card-body">
         <div class="example">
-          <div class="tab-content rounded-bottom">
-            <div
-              class="tab-pane p-3 active preview"
-              role="tabpanel"
-              id="preview-946"
-            >
-              <div class="row">
-                <div class="col-xl-4">
-                  <div
-                    class="card text-white bg-info mb-3 clickable-card"
-                    data-href="{% url 'upload' %}"
-                  >
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">Тема НИР</h5>
-                      <p class="card-text">Загрузите файл</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">Задание</h5>
-                      <p class="card-text">Загрузите задание</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">
-                        Расширенная пояснительная записка
-                      </h5>
-                      <p class="card-text">Загрузите РСПЗ</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">Пояснительная записка</h5>
-                      <p class="card-text">Загрузите ПЗ</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Работа</th>
+                <th scope="col">Семестр</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for submission in submissions %}
+              <tr>
+                <th scope="row">{{ forloop.counter }}</th>
+                <td>{{ submission.research_work.name }}</td>
+                <td>{{ submission.semester }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <br />
+          <form class="row g-3" method="POST" action="">
+            {% csrf_token %}
+            <div class="col-md-6">
+              <label class="form-label" for="researchWorkSelect">Работа</label>
+              <select
+                class="form-select"
+                id="researchWorkSelect"
+                name="research_work_id"
+              >
+                <option selected>Choose...</option>
+                {% for work in research_works %}
+                <option value="{{work.id}}">{{work.name}}</option>
+                {% endfor %}
+              </select>
             </div>
-          </div>
+            <div class="col-md-4">
+              <label class="form-label" for="semesterSelect">Семестр</label>
+              <select class="form-select" id="semesterSelect" name="semester">
+                <option selected>Choose...</option>
+                {% for sem in semester %}
+                <option>{{sem}}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary" type="submit">Добавить</button>
+            </div>
+          </form>
+          <br />
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const clickableCards = document.querySelectorAll(".clickable-card");
-    clickableCards.forEach((card) => {
-      card.addEventListener("click", function () {
-        window.location.href = this.getAttribute("data-href");
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const clickableCards = document.querySelectorAll(".clickable-card");
+      clickableCards.forEach((card) => {
+        card.addEventListener("click", function () {
+          window.location.href = this.getAttribute("data-href");
+        });
       });
     });
-  });
-</script>
-{% endblock content %}
+  </script>
+  {% endblock content %}
+</div>
