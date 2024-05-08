@@ -3,6 +3,9 @@
   .clickable-card {
     cursor: pointer;
   }
+  tr {
+    cursor: pointer;
+  }
 </style>
 {% endblock %} {% block content %}
 <div class="body flex-grow-1 px-3">
@@ -50,11 +53,16 @@
             </thead>
             <tbody>
               {% for submission in submissions %}
-              <tr>
+
+              <tr
+                class="clickable-row"
+                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester %}"
+              >
                 <th scope="row">{{ forloop.counter }}</th>
                 <td>{{ submission.research_work.name }}</td>
                 <td>{{ submission.semester }}</td>
               </tr>
+
               {% endfor %}
             </tbody>
           </table>
@@ -95,9 +103,9 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const clickableCards = document.querySelectorAll(".clickable-card");
-      clickableCards.forEach((card) => {
-        card.addEventListener("click", function () {
+      const clickableRows = document.querySelectorAll(".clickable-row");
+      clickableRows.forEach((row) => {
+        row.addEventListener("click", function () {
           window.location.href = this.getAttribute("data-href");
         });
       });

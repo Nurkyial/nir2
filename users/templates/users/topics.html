@@ -20,47 +20,20 @@
               id="preview-946"
             >
               <div class="row">
+                {% for topic in topics %}
                 <div class="col-xl-4">
                   <div
                     class="card text-white bg-info mb-3 clickable-card"
-                    data-href="{% url 'upload' %}"
+                    data-href="{% url 'upload-page' rw_id=research_work.id topic_id=topic.id %}"
                   >
-                    <div class="card-header">НИР</div>
+                    <div class="card-header">{{research_work.name}}</div>
                     <div class="card-body">
-                      <h5 class="card-title">Тема НИР</h5>
+                      <h5 class="card-title">{{topic.name}}</h5>
                       <p class="card-text">Загрузите файл</p>
                     </div>
                   </div>
                 </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">Задание</h5>
-                      <p class="card-text">Загрузите задание</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">
-                        Расширенная пояснительная записка
-                      </h5>
-                      <p class="card-text">Загрузите РСПЗ</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-xl-4">
-                  <div class="card text-white bg-info mb-3">
-                    <div class="card-header">НИР</div>
-                    <div class="card-body">
-                      <h5 class="card-title">Пояснительная записка</h5>
-                      <p class="card-text">Загрузите ПЗ</p>
-                    </div>
-                  </div>
-                </div>
+                {% endfor %}
               </div>
             </div>
           </div>

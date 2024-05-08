@@ -69,10 +69,22 @@ def student_home(request, pk):
         
     return render(request, 'users/student_home.html', context)
 
-def upload_page(request):
-    return render(request, 'users/upload_file.html')
+def research_work_detail(request, rw_id, semester):
+    research_work = get_object_or_404(ResearchWork, pk=rw_id)
+    submissions = Submission.objects.filter(research_work=research_work, semester=semester)
+    topics = Topic.objects.filter(research_work=research_work)
+    context =   {'research_work': research_work, 'submissions':submissions, 'topics': topics }
+    return render(request, 'users/topics.html', context=context)
 
-def upload_file(request):
+
+def upload_page(request, rw_id, topic_id):
+    research_work = get_object_or_404(ResearchWork, pk=rw_id)
+    topic =  get_object_or_404(Topic, pk=topic_id)
+    context = {'research_work':research_work, 'topic':topic}
+    return render(request, 'users/upload_file.html', context)
+
+
+def upload_file(request, rw_id, topic_id):
     if request.method == 'POST':
         request_file = request.FILES.get('document') if 'document' in request.FILES else None
         if request_file: 
@@ -82,6 +94,7 @@ def upload_file(request):
             context = {'fileurl':fileurl}
             
             filedata = File.objects.create(
+                topic=topic_id,
                 filename = request_file.name,
                 created_at = fs.get_created_time(filename)
             )  
