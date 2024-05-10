@@ -56,7 +56,7 @@
 
               <tr
                 class="clickable-row"
-                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester %}"
+                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester subm_id=submission.id %}"
               >
                 <th scope="row">{{ forloop.counter }}</th>
                 <td>{{ submission.research_work.name }}</td>

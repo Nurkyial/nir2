@@ -69,37 +69,47 @@ def student_home(request, pk):
         
     return render(request, 'users/student_home.html', context)
 
-def research_work_detail(request, rw_id, semester):
+def research_work_detail(request, rw_id, semester, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
     submissions = Submission.objects.filter(research_work=research_work, semester=semester)
+    submission = get_object_or_404(Submission, pk=subm_id)
     topics = Topic.objects.filter(research_work=research_work)
-    context =   {'research_work': research_work, 'submissions':submissions, 'topics': topics }
+    context =   {'research_work': research_work, 'submissions':submissions, 'topics': topics, 'submission_id':submission.id }
     return render(request, 'users/topics.html', context=context)
 
 
-def upload_page(request, rw_id, topic_id):
+def upload_page(request, rw_id, topic_id, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
     topic =  get_object_or_404(Topic, pk=topic_id)
-    context = {'research_work':research_work, 'topic':topic}
+    submission = get_object_or_404(Submission, pk=subm_id)
+    context = {'research_work':research_work, 'topic':topic.id, 'submission':submission.id}
     return render(request, 'users/upload_file.html', context)
 
 
-def upload_file(request, rw_id, topic_id):
-    if request.method == 'POST':
-        request_file = request.FILES.get('document') if 'document' in request.FILES else None
+def upload_file(request, subm_id, topic_id):
+    submission = get_object_or_404(Submission, pk=subm_id)
+    topic = get_object_or_404(Topic, pk=topic_id)
+    context = {'submission':submission, 'topic':topic}
+    if request.method == 'post':
+        request_file = request.FILES.get('document')
+        
         if request_file: 
             fs = FileSystemStorage()
             filename = fs.save(request_file.name, request_file)
             fileurl = fs.url(filename)
-            context = {'fileurl':fileurl}
+            context.update({'fileurl': fileurl})
             
             filedata = File.objects.create(
-                topic=topic_id,
-                filename = request_file.name,
-                created_at = fs.get_created_time(filename)
+                topic=topic,
+                submission=submission, 
+                filename = request_file,
             )  
-            return render(request, 'users/upload_file.html', context)
-    return render(request, 'users/upload_file.html')
+            filedata.save()
+            messages.success(request, 'File succesfully uploaded')
+            return redirect('upload_file', subm_id=submission.id, topic_id=topic.id)
+        else:
+            messages.error(request, 'No file was uploaded')
+    return render(request, 'users/upload_file.html', context=context)
 
 
 
