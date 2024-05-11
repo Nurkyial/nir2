@@ -23,6 +23,7 @@ class Assignment(models.Model):
     teacher = models.ForeignKey(UserProfile, related_name='teacher_assignment', on_delete=models.CASCADE)
     is_accepted = models.BooleanField(default=False) # charfield
     created_at = models.DateTimeField(auto_now_add=True)
+    text = models.TextField(blank=True)
     
     
     def __str__(self):
@@ -59,6 +60,7 @@ class File(models.Model):
     filename = models.FileField(upload_to='submissions/', null=True)
     upload_date = models.DateTimeField(auto_now_add=True)
     is_accepted = models.BooleanField(default=False)
+    
      
     def __str__(self):
         return f"File: {self.filename.name} for Topic: {self.topic.name}"

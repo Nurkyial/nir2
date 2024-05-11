@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
-import datetime
+from .form import UploadFileForm, ChooseTeacherForm
 
 # Create your views here.
 def loginPage(request):
@@ -82,34 +82,55 @@ def upload_page(request, rw_id, topic_id, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
     topic =  get_object_or_404(Topic, pk=topic_id)
     submission = get_object_or_404(Submission, pk=subm_id)
-    context = {'research_work':research_work, 'topic':topic.id, 'submission':submission.id}
+    form = UploadFileForm()  # This ensures the form is available if needed
+    file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
+    context = {'research_work':research_work, 'topic':topic, 'submission':submission, 'form': form, 'file_list': file_list  }
     return render(request, 'users/upload_file.html', context)
 
 
 def upload_file(request, subm_id, topic_id):
     submission = get_object_or_404(Submission, pk=subm_id)
     topic = get_object_or_404(Topic, pk=topic_id)
-    context = {'submission':submission, 'topic':topic}
-    if request.method == 'post':
-        request_file = request.FILES.get('document')
-        
-        if request_file: 
-            fs = FileSystemStorage()
-            filename = fs.save(request_file.name, request_file)
-            fileurl = fs.url(filename)
-            context.update({'fileurl': fileurl})
-            
-            filedata = File.objects.create(
-                topic=topic,
-                submission=submission, 
-                filename = request_file,
-            )  
-            filedata.save()
+    form = UploadFileForm()
+    file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
+    context = {'submission':submission, 'topic':topic, 'form': form, 'file_list':file_list}
+    print("Files loaded:", file_list.count())
+    
+    if request.method == 'POST':
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid(): 
+            file_instance = form.save(commit=False)
+            file_instance.topic = topic
+            file_instance.submission = submission
+            file_instance.save()
+            file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
+            context.update({'file_list':file_list})
             messages.success(request, 'File succesfully uploaded')
-            return redirect('upload_file', subm_id=submission.id, topic_id=topic.id)
+            # return render(request, 'users/upload_file.html', context=context)
+            return redirect('upload-file', subm_id=submission.id, topic_id=topic.id)
         else:
             messages.error(request, 'No file was uploaded')
+            form = UploadFileForm()
     return render(request, 'users/upload_file.html', context=context)
+
+def choose_teacher(request, student_id):
+    teachers = UserProfile.objects.filter(role='teacher')
+    student = get_object_or_404(UserProfile, pk=student_id, role='student')
+    
+    if request.method == 'POST':
+        teacher_id = request.POST.get("teacher_id")
+        message = request.POST.get("message")
+        if teacher_id and message:
+            teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
+            Assignment.objects.create(student=student, teacher=teacher, text = message)
+            return redirect('choose-teacher', student_id=student.id)
+        else:
+            messages.error(request, 'Something went wrong')
+            print('It id not work')
+    
+    chosen_teachers = Assignment.objects.filter(student=student).order_by('-created_at')
+    context = {'teachers':teachers, 'student':student, 'chosen_teachers':chosen_teachers}
+    return render(request, 'users/choose_teacher.html', context=context)
 
 
 

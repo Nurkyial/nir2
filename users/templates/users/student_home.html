@@ -25,9 +25,11 @@
               <div class="row align-items-center justify-content-between">
                 <div class="col">ФИО научрука</div>
                 <div class="col-auto">
-                  <button class="btn btn-danger" type="button">
-                    Не выбран
-                  </button>
+                  <a
+                    href="{% url 'choose-teacher' student_id=student.id%}"
+                    class="btn btn-danger"
+                    >Не выбран</a
+                  >
                 </div>
               </div>
             </div>

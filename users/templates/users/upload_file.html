@@ -1,4 +1,5 @@
-{% extends "main.html" %} {% block content %}
+{% extends "main.html" %} {% load crispy_forms_tags %} {% block content %}
+
 <div class="body flex-grow-1 px-3">
   <div class="container-lg">
     <div class="card mb-4">
@@ -7,18 +8,19 @@
       </div>
       <div class="card-body">
         <div class="example">
-          <form method="post" action="" enctype="multipart/form-data">
+          <form
+            method="POST"
+            action="{% url 'upload-file' subm_id=submission.id topic_id=topic.id %}"
+            enctype="multipart/form-data"
+          >
             {% csrf_token %}
             <div class="mb-3">
-              <label class="form-label" for="formFile">Загрузите файл</label>
-              <input
-                class="form-control"
-                id="formFile"
-                type="file"
-                name="document"
-              />
+              <label class="form-label" for="{{ form.filename.id_for_label}} "
+                >Загрузите файл</label
+              >
+              {{ form|crispy }}
             </div>
-            <button class="btn btn-secondary" type="submit">Отправить</button>
+            <input class="btn btn-secondary" type="submit" value="Submit" />
           </form>
         </div>
       </div>
@@ -37,22 +39,26 @@
                   <th style="width: 20%" scope="col">Файл</th>
                   <th style="width: 20%" scope="col">Дата загрузки</th>
                   <th style="width: 20%" scope="col">Статус проверки</th>
-                  <th style="width: 20%" scope="col">Оценка</th>
                   <th style="width: 20%" scope="col">Комментарий</th>
                 </tr>
               </thead>
               <tbody>
+                {% for file in file_list %}
                 <tr>
-                  <td>Filename</td>
-                  <td>date</td>
-                  <td>На проверке</td>
-                  <td>0-100</td>
+                  <td>
+                    <a href="{{file.filename.url}}" target="_blank"
+                      >{{ file.filename.name }}</a
+                    >
+                  </td>
+                  <td>{{file.upload_date|date:"Y-m-d H:i"}}</td>
+                  <td>{{file.is_accepted|yesno:"Принята, Не принята"}}</td>
                   <td>
                     This here is some placeholder text, intended to take up
                     quite a bit of vertical space, to demonstrate how the
                     vertical alignment works in the preceding cells.
                   </td>
                 </tr>
+                {% endfor %}
               </tbody>
             </table>
           </div>
