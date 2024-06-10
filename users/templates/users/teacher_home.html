@@ -1,0 +1,116 @@
+{% extends "main.html" %} {% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr {
+    cursor: pointer;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+  <div class="container-lg">
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Запросы</strong>
+      </div>
+      <div class="card-body">
+        <div class="example">
+          <form action="" method="POST">
+            {% csrf_token %}
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th style="width: 20%" scope="col">ФИО студента</th>
+                    <th style="width: 20%" scope="col">Группа</th>
+                    <th style="width: 20%" scope="col">Письмо</th>
+                    <th style="width: 20%" scope="col">Принять/отклонить</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for assignment in assignments %}
+                  {% if not assignment.is_accepted and not assignment.is_reviewed %}
+                  <tr>
+                    <td>
+                      {{assignment.student.user.first_name}}
+                      {{assignment.student.user.last_name}}
+                      {{assignment.student.user.middle_name}}
+                    </td>
+                    <td>{{assignment.student.group}}</td>
+                    <td>{{assignment.text}}</td>
+                    <td>
+                      <input type="hidden" name="assignment_id" value={{assignment.id}} />
+                      <button
+                        class="btn btn-success"
+                        type="submit"
+                        name="action"
+                        value="accept"
+                      >
+                        Принять
+                      </button>
+                      <button
+                        class="btn btn-danger"
+                        type="submit"
+                        name="action"
+                        value="reject"
+                      >
+                        <input
+                          type="hidden"
+                          name="assignment_id"
+                          value="{{assignment.id}}"
+                        />
+                        отклонить
+                      </button>
+                    </td>
+                  </tr>
+                  {% endif %}                              
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4">
+      <div class="card-header"><strong>Работы студентов</strong></div>
+      <div class="card-body">
+        <div class="examples">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="width: 20%" scope="col">#</th>
+                <th style="width: 20%" scope="col">ФИО студента</th>
+                <th style="width: 20%" scope="col">Группа</th>
+                <th style="width: 20%" scope="col">Активность</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for assignment in assignments %}
+              <tr class="clickable-row" 
+                  data-href="{% url 'student-work-detail' as_id=assignment.id %}">
+                <th scope="row">{{ forloop.counter }}</th>
+                <td>{{assignment.student.user.last_name}} {{assignment.student.user.first_name}}</td>
+                <td>{{assignment.student.group.group_name}}</td>
+                <td>{{assignment.is_accepted|yesno:"Active, non-active"}}</td>
+              </tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableRows = document.querySelectorAll(".clickable-row");
+    clickableRows.forEach((row) => {
+      row.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
+      });
+    });
+  });
+</script>
+{% endblock content %}

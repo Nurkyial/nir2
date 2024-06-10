@@ -5,11 +5,16 @@ from django.conf import settings
 
 urlpatterns = [
     path('login/', views.loginPage, name='login'),
+    path('logout/', views.logoutUser, name='logout'),
+    path('home/', views.home, name='home'),
     path('student/<str:pk>/', views.student_home, name='student-home'),
+    path('teacher/<str:teacher_id>/', views.teacher_home, name='teacher-home'),
     path('research-work/<int:rw_id>/<str:semester>/<int:subm_id>/', views.research_work_detail, name='research-work-detail'),
     path('topics/<int:rw_id>/<int:topic_id>/<int:subm_id>/', views.upload_page, name='upload-page'),
     path('upload-file/<int:subm_id>/<int:topic_id>/', views.upload_file, name='upload-file'),
     path('choose-teacher/<int:student_id>/', views.choose_teacher, name='choose-teacher'),
+    path('student-work-detail/<int:as_id>/', views.student_work_detail, name='student-work-detail'),
+    path('student-work-topics/<int:sub_id>/', views.student_work_topics, name='student-work-topics'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

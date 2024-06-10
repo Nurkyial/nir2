@@ -55,7 +55,6 @@
             </thead>
             <tbody>
               {% for submission in submissions %}
-
               <tr
                 class="clickable-row"
                 data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester subm_id=submission.id %}"

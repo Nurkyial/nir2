@@ -1,0 +1,54 @@
+{% extends "main.html" %} {% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr {
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="body flex-grow-1 px-3">
+    <div class="container-lg">
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Работа студента: {{assignment.student.user.first_name}} {{assignment.student.user.last_name}}</strong>
+            </div>
+            <div class="card-body">
+                <div class="example">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Работа</th>
+                                <th scope="col">Семестр</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in submissions %}
+                            <tr class="clickable-row" data-href="{% url 'student-work-topics' sub_id=submission.id %}">
+                                <th scope="row">{{ forloop.counter }}</th>
+                                <td>{{ submission.research_work.name }}</td>
+                                <td>{{ submission.semester }}</td>
+                            </tr>   
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const clickableRows = document.querySelectorAll(".clickable-row");
+      clickableRows.forEach((row) => {
+        row.addEventListener("click", function () {
+          window.location.href = this.getAttribute("data-href");
+        });
+      });
+    });
+  </script>
+{% endblock content %}

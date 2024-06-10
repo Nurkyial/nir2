@@ -22,6 +22,7 @@ class Assignment(models.Model):
     student = models.ForeignKey(UserProfile, related_name='student_assignment', on_delete=models.CASCADE)
     teacher = models.ForeignKey(UserProfile, related_name='teacher_assignment', on_delete=models.CASCADE)
     is_accepted = models.BooleanField(default=False) # charfield
+    is_reviewed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     text = models.TextField(blank=True)
     

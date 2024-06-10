@@ -1,22 +1,61 @@
+{% load static %} {% if user.is_authenticated %}
 <div class="sidebar sidebar-dark sidebar-fixed" id="sidebar">
   <div class="sidebar-brand d-none d-md-flex">
-    <svg class="sidebar-brand-full" width="118" height="46" alt="CoreUI Logo">
-      <use xlink:href="/static/assets/coreui.svg#full"></use>
-    </svg>
-    <svg class="sidebar-brand-narrow" width="46" height="46" alt="CoreUI Logo">
-      <use xlink:href="/static/assets/coreui.svg#signet"></use>
-    </svg>
+    <img
+      src="{% static 'images/white_logo.png' %}"
+      width="130"
+      height="60"
+      alt="My Logo"
+    />
   </div>
+
   <ul class="sidebar-nav" data-coreui="navigation" data-simplebar="">
+    <li class="nav-title">Главная</li>
     <li class="nav-item">
-      <a class="nav-link" href="home/index.html">
+      <a class="nav-link" href="{% url 'home'%}">
         <svg class="nav-icon">
-          <use xlink:href="/static/assets/free.svg#cil-speedometer"></use>
-        </svg>
-        Dashboard<span class="badge badge-sm bg-info ms-auto">NEW</span></a
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-home"
+          ></use></svg
+        >Home</a
       >
     </li>
-    <li class="nav-title">Theme</li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        href="{% url 'choose-teacher' student_id=user_profile_pk%}"
+      >
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-cursor"
+          ></use></svg
+        >Выбор научрука</a
+      >
+    </li>
+
+    <li class="nav-group">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-puzzle"
+          ></use>
+        </svg>
+        Выбор работы</a
+      >
+      <ul class="nav-group-items">
+        {% for submission in submissions %}
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester subm_id=submission.id %}"
+            ><span class="nav-icon"></span>{{submission.research_work.name}} -
+            Сем.{{submission.semester}}</a
+          >
+        </li>
+
+        {% endfor %}
+      </ul>
+    </li>
   </ul>
   <button
     class="sidebar-toggler"
@@ -24,3 +63,4 @@
     data-coreui-toggle="unfoldable"
   ></button>
 </div>
+{% endif %}
