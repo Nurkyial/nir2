@@ -1,0 +1,59 @@
+{% extends "main.html" %} {% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr {
+    cursor: pointer;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+  <div class="container-lg">
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>{{submission.research_work.name}}</strong>
+      </div>
+      <div class="card-body">
+        <div class="example">
+          <div
+            class="tab-pane p-3 active preview"
+            role="tabpanel"
+            id="preview-946"
+          >
+            <div class="row">
+              {% for topic in topics %}
+              <div class="col-xl-4">
+                <div
+                  class="card text-white bg-info mb-3 clickable-card"
+                  data-href="{% url 'topics-files' sub_id=submission.id topic_id=topic.id%}"
+                >
+                  <div class="card-header">
+                    {{submission.research_work.name}}
+                  </div>
+                  <div class="card-body">
+                    <h5 class="card-title">{{topic.name}}</h5>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableCards = document.querySelectorAll(".clickable-card");
+    clickableCards.forEach((card) => {
+      card.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
+      });
+    });
+  });
+</script>
+
+{% endblock content %}

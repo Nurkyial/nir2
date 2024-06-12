@@ -1,17 +1,46 @@
-from base.models import Submission
+from base.models import Submission, Assignment
+from users.models import UserProfile
 
 def user_profile_pk(request):
     context = {}
     if request.user.is_authenticated:
-        user_profile_pk = request.user.userprofile.pk
-        context['user_profile_pk'] = user_profile_pk
-        
-        student = request.user.userprofile
-        submissions = Submission.objects.filter(assignment__student=student)
-        context['submissions'] = submissions
-        print(f"Submissions for {student}: {submissions}")  # Move this inside the if block
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            if user_profile.role == 'student':
+                submissions = Submission.objects.filter(assignment__student=user_profile)
+                context = {
+                    'user_profile_pk': user_profile.pk,
+                    'submissions': submissions,
+                    'assignments': None,
+                    'role': 'student'
+                }
+            elif user_profile.role == 'teacher':
+                assignments = Assignment.objects.filter(teacher=user_profile)
+                context = {
+                    'user_profile_pk': user_profile.pk,
+                    'assignments': assignments,
+                    'submissions': None,
+                    'role': 'teacher'
+                }
+            else:
+                context = {
+                    'user_profile_pk': user_profile.pk,
+                    'role': 'unknown'
+                }
+                
+        except UserProfile.DoesNotExist:
+            context = {
+                'user_profile_pk': None,
+                'role': 'unknown'
+            }
+    
     else:
-        context['user_profile_pk'] = None
-        context['submissions'] = None
+        context = {
+            'user_profile_pk': None,
+            'role': 'guest'
+        }
     return context
+                
+
+
 

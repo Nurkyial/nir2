@@ -51,12 +51,14 @@
                     >
                   </td>
                   <td>{{file.upload_date|date:"Y-m-d H:i"}}</td>
-                  <td>{{file.is_accepted|yesno:"Принята, Не принята"}}</td>
-                  <td>
-                    This here is some placeholder text, intended to take up
-                    quite a bit of vertical space, to demonstrate how the
-                    vertical alignment works in the preceding cells.
-                  </td>
+                  {% if file.is_reviewed %} {% if file.is_accepted %}
+                  <td style="color: green">Принято</td>
+                  {% else %}
+                  <td style="color: red">Не принято</td>
+                  {% endif %} {% else %}
+                  <td style="color: orange">На проверке</td>
+                  {% endif %}
+                  <td>{{file.comment}}</td>
                 </tr>
                 {% endfor %}
               </tbody>

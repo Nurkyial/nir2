@@ -14,7 +14,8 @@ urlpatterns = [
     path('upload-file/<int:subm_id>/<int:topic_id>/', views.upload_file, name='upload-file'),
     path('choose-teacher/<int:student_id>/', views.choose_teacher, name='choose-teacher'),
     path('student-work-detail/<int:as_id>/', views.student_work_detail, name='student-work-detail'),
-    path('student-work-topics/<int:sub_id>/', views.student_work_topics, name='student-work-topics'),
+    path('submission-topics/<int:sub_id>/', views.submission_topics, name='submission-topics'),
+    path('topics-files/<int:sub_id>/<int:topic_id>/', views.topics_files, name='topics-files')
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

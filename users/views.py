@@ -64,11 +64,19 @@ def student_home(request, pk):
     if request.user.is_authenticated:
         student = get_object_or_404(UserProfile, user__id=pk)
         teacher = UserProfile.objects.get(role='teacher', user__id='2')
-        print(teacher)
         research_works = ResearchWork.objects.all()
         semester = ['1', '2', '3', '4', '5', '6', '7', '8']
         submissions = Submission.objects.filter(assignment__student=student)
-        context = {'research_works':research_works, 'semester':semester, 'student':student, 'submissions': submissions}
+        
+        try:          
+            assignment = Assignment.objects.get(student=student, is_accepted=True)
+            teacher_assigned = True 
+        except Assignment.DoesNotExist:
+            assignment = None
+            teacher_assigned = False
+            
+        context = {'research_works':research_works, 'semester':semester, 'student':student, 'submissions': submissions,
+                   'assignment':assignment, 'teacher_assigned':teacher_assigned}
         
         if request.method == 'POST':  
             research_work_id = request.POST.get('research_work_id')  
@@ -219,5 +227,54 @@ def student_work_detail(request, as_id):
         messages.error(request, 'Invalid user')
         return redirect('login')
     
-def student_work_topics(request, sub_id):
-    pass
+@login_required
+def submission_topics(request, sub_id):
+    if request.user.is_authenticated:
+        submission = get_object_or_404(Submission, pk=sub_id)
+        
+        if submission.assignment.teacher != request.user.userprofile:
+            messages.error(request, "You do not have permission to view this page.")
+            return redirect('teacher-home', teacher_id=request.user.userprofile.pk)
+        
+        topics = Topic.objects.filter(research_work=submission.research_work)
+        context = {'submission':submission, 'topics':topics}
+        
+        return render(request, 'users/submission_topics.html', context=context)
+    
+    else:
+        messages.error(request, 'Invalid user')
+        return redirect('login')
+    
+@login_required
+def topics_files(request, sub_id, topic_id):
+    if request.user.is_authenticated:
+        submission = get_object_or_404(Submission, pk=sub_id)
+        topic = get_object_or_404(Topic, pk=topic_id)
+        files = File.objects.filter(topic=topic, submission=submission).order_by('-upload_date')
+        last_uploaded_file = files.first() if files.exists() else None
+        
+        if request.method == 'POST':
+            file_id = request.POST.get('file_id')
+            action = request.POST.get('action')
+            comment_text = request.POST.get('comment')
+            file_object = get_object_or_404(File, pk=file_id)
+            if action == 'Принять':
+                file_object.is_accepted = True
+                file_object.is_reviewed = True
+                file_object.comment = ''
+                messages.success(request, 'File accepted')
+            elif action == 'Отклонить':
+                file_object.is_accepted = False
+                file_object.is_reviewed = True
+                file_object.comment = comment_text
+                messages.success(request, 'File rejected.')
+            
+            file_object.save()
+            return redirect('topics-files', sub_id=sub_id, topic_id=topic_id)
+            
+            
+        context = {'topic':topic, 'files':files, 'last_uploaded_file':last_uploaded_file}
+        return render(request, 'users/topics_files.html', context=context)
+    else:
+        messages.error(request, 'Invalid user') 
+        return redirect('login')

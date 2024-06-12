@@ -37,11 +37,15 @@
     <!-- prettier-ignore-end -->
   </head>
   <body>
-    {% comment %} {% if user.is_authenticated %}
-    <h1>Hello</h1>
-    {% include "includes/sidebar.html"%} {% endif %} {% endcomment %}
-    <!-- prettier-ignore-start -->
-    {% include "includes/sidebar.html"%}
+    <!-- prettier-ignore -->
+    {% if user.is_authenticated %} 
+    {% if user.userprofile.role == 'student' %}
+    {% include "includes/sidebar.html"%} 
+    {% elif user.userprofile.role == 'teacher' %} 
+    {% include "includes/sidebar_teacher.html" %} 
+    {% endif %} 
+    {% endif %}
+    <!-- prettier-ignore -->
 
     <div class="wrapper d-flex flex-column min-vh-100 bg-light">
       {% include 'includes/navigation.html' %}

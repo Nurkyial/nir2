@@ -61,19 +61,20 @@ class File(models.Model):
     filename = models.FileField(upload_to='submissions/', null=True)
     upload_date = models.DateTimeField(auto_now_add=True)
     is_accepted = models.BooleanField(default=False)
-    
+    is_reviewed = models.BooleanField(default=False)
+    comment = models.TextField(null=True, blank=True) 
      
     def __str__(self):
         return f"File: {self.filename.name} for Topic: {self.topic.name}"
     
 
-class Comment(models.Model):
-    file_comment = models.OneToOneField(File, on_delete=models.CASCADE, related_name='comment')
-    text = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+# class Comment(models.Model):
+#     file_comment = models.OneToOneField(File, on_delete=models.CASCADE, related_name='detailed_comment')
+#     text = models.TextField(null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
     
-    def __str__(self):
-        return f"Comment for {self.file_comment.filename}"
+#     def __str__(self):
+#         return f"Comment for {self.file_comment.filename}"
 
 class UserChatM2m(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
