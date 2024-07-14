@@ -22,6 +22,15 @@ def user_profile_pk(request):
                     'submissions': None,
                     'role': 'teacher'
                 }
+                
+            elif user_profile.role == 'admin':
+                assignments = Assignment.objects.filter(is_accepted=True)
+                context = {
+                    'user_profile_pk': user_profile.pk,
+                    'assignments': assignments,
+                    'submissions': None,
+                    'role': 'admin'
+                }
             else:
                 context = {
                     'user_profile_pk': user_profile.pk,

@@ -128,16 +128,16 @@
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const clickableRows = document.querySelectorAll(".clickable-row");
-      clickableRows.forEach((row) => {
-        row.addEventListener("click", function () {
-          window.location.href = this.getAttribute("data-href");
-        });
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableRows = document.querySelectorAll(".clickable-row");
+    clickableRows.forEach((row) => {
+      row.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
       });
     });
-  </script>
-  {% endblock content %}
-</div>
+  });
+</script>
+{% endblock content %}

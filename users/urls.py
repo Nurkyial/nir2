@@ -15,7 +15,11 @@ urlpatterns = [
     path('choose-teacher/<int:student_id>/', views.choose_teacher, name='choose-teacher'),
     path('student-work-detail/<int:as_id>/', views.student_work_detail, name='student-work-detail'),
     path('submission-topics/<int:sub_id>/', views.submission_topics, name='submission-topics'),
-    path('topics-files/<int:sub_id>/<int:topic_id>/', views.topics_files, name='topics-files')
+    path('topics-files/<int:sub_id>/<int:topic_id>/', views.topics_files, name='topics-files'),
+    path('admin-home/<str:admin_id>/', views.admin_home, name='admin-home'),
+    path('admin-students-work/<str:as_id>/', views.admin_students_work, name='admin-students-work'),
+    path('admin-submission-details/<str:sub_id>/', views.admin_submission_details, name='admin-submission-details'),
+    path('add-user/', views.add_user, name='add-user'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

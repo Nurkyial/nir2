@@ -43,6 +43,8 @@
     {% include "includes/sidebar.html"%} 
     {% elif user.userprofile.role == 'teacher' %} 
     {% include "includes/sidebar_teacher.html" %} 
+    {% elif user.userprofile.role == 'admin' %}
+    {% include "includes/sidebar_admin.html"%} 
     {% endif %} 
     {% endif %}
     <!-- prettier-ignore -->

@@ -1,0 +1,65 @@
+{% load static %} {% if user.is_authenticated %}
+<div class="sidebar sidebar-dark sidebar-fixed" id="sidebar">
+  <div class="sidebar-brand d-none d-md-flex">
+    <img
+      src="{% static 'images/white_logo.png' %}"
+      width="130"
+      height="60"
+      alt="My Logo"
+    />
+  </div>
+
+  <ul class="sidebar-nav" data-coreui="navigation" data-simplebar="">
+    <li class="nav-title">Главная</li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        href="{% url 'admin-home' admin_id=user_profile_pk %}"
+      >
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-home"
+          ></use></svg
+        >Home</a
+      >
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'add-user' %}">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user"
+          ></use></svg
+        >Add user</a
+      >
+    </li>
+    <li class="nav-group">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-people"
+          ></use></svg
+        >Assignments</a
+      >
+      <ul class="nav-group-items">
+        {% for assignment in assignments %}
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            href="{% url 'admin-students-work' as_id=assignment.id %}"
+            ><span class="nav-icon"></span
+            >{{assignment.student.user.first_name}} -
+            {{assignment.teacher.user.first_name}}</a
+          >
+        </li>
+
+        {% endfor %}
+      </ul>
+    </li>
+  </ul>
+  <button
+    class="sidebar-toggler"
+    type="button"
+    data-coreui-toggle="unfoldable"
+  ></button>
+</div>
+{% endif %}

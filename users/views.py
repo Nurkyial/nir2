@@ -4,11 +4,11 @@ from base.models import File, ResearchWork, Submission, Topic, Assignment
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
-from .form import UploadFileForm, ChooseTeacherForm
+from .form import UploadFileForm, UserCreationForm
 
 # Create your views here.
 def loginPage(request):
@@ -45,6 +45,8 @@ def redirect_dashboard(user):
         return redirect('student-home', pk=user_profile.pk)
     elif user_profile.role == 'teacher':
         return redirect('teacher-home', teacher_id=user_profile.pk)
+    elif user_profile.role == 'admin':
+        return redirect('admin-home', admin_id=user_profile.pk)
     else:
         messages.error('Unknown user')
         return redirect('login')
@@ -278,3 +280,58 @@ def topics_files(request, sub_id, topic_id):
     else:
         messages.error(request, 'Invalid user') 
         return redirect('login')
+    
+@login_required
+def admin_home(request, admin_id):
+    if request.user.is_authenticated:
+        
+        teachers = UserProfile.objects.filter(role='teacher')
+        students = UserProfile.objects.filter(role='student')
+        assignments = Assignment.objects.filter(is_accepted=True)
+        context = {'teachers':teachers, 'students':students, 'assignments':assignments}
+        return render(request, 'users/admin_home.html', context=context)
+    else:
+        messages.error(request, 'Invalid user') 
+        return redirect('login')
+    
+@login_required
+def admin_students_work(request, as_id):
+    if request.user.is_authenticated:
+        assignment = get_object_or_404(Assignment, pk=as_id)    
+        submissions = assignment.submission_set.all()
+        context = {'submissions':submissions, 'assignment':assignment}
+        return render(request, 'users/admin_students_work.html', context=context)
+    
+    else:
+        messages.error(request, 'Invalid user')
+        return redirect('login')
+
+
+def admin_submission_details(request, sub_id):
+    if request.user.is_authenticated:
+        submission = get_object_or_404(Submission, pk=sub_id)
+        topics = Topic.objects.filter(research_work=submission.research_work)
+        topic_files = {topic: File.objects.filter(topic=topic, submission=submission) for topic in topics}
+        context = {'submission':submission, 'topics':topics, 'topic_files':topic_files}
+        return render(request, 'users/admin_submission_details.html', context=context)
+    else:
+        messages.error(request, 'Invalid user')
+        return redirect('login')
+    
+
+
+
+@login_required
+def add_user(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'User created successfully')
+            return redirect('add-user')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = UserCreationForm()
+        return render(request, 'users/add_user.html', {'form': form})
+        
