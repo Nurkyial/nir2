@@ -3,6 +3,7 @@ from . import views
 from django.conf.urls.static import static
 from django.conf import settings
 
+
 urlpatterns = [
     path('login/', views.loginPage, name='login'),
     path('logout/', views.logoutUser, name='logout'),
@@ -20,6 +21,7 @@ urlpatterns = [
     path('admin-students-work/<str:as_id>/', views.admin_students_work, name='admin-students-work'),
     path('admin-submission-details/<str:sub_id>/', views.admin_submission_details, name='admin-submission-details'),
     path('add-user/', views.add_user, name='add-user'),
+    path('student/<str:pk>/chat/', views.chat, name='chat'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

@@ -6,7 +6,7 @@ class ResearchWork(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     
-    def __str__(self):
+    def __str__(self): 
         return self.name
     
 class Topic(models.Model):
@@ -29,21 +29,33 @@ class Assignment(models.Model):
     
     def __str__(self):
         return f"Assignment for {self.student.user.username} with {self.teacher.user.username}"
+
+class Semester(models.Model):
+    semester_name = models.CharField(max_length=100, null=True)
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    def __str__(self):
+        return f"{self.semester_name}: {self.start_date} - {self.end_date}"  
     
-    
+    def is_within_semester(self, date):
+        """Проверяет, входит ли дата в диапазое текущего семестра"""
+        return self.start_date <= date <= self.end_date
+
 class Submission(models.Model):
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE)
-    SEMESTER_CHOICES = (
-        ('1', 'Semester 1'),
-        ('2', 'Semester 2'),
-        ('3', 'Semester 3'),
-        ('4', 'Semester 4'),
-        ('5', 'Semester 5'),
-        ('6', 'Semester 6'),
-        ('7', 'Semester 7'),
-        ('8', 'Semester 8'),
-    )
-    semester = models.CharField(max_length=100, null=True, choices=SEMESTER_CHOICES)
+    # SEMESTER_CHOICES = (
+    #     ('1', 'Semester 1'),
+    #     ('2', 'Semester 2'),
+    #     ('3', 'Semester 3'),
+    #     ('4', 'Semester 4'),
+    #     ('5', 'Semester 5'),
+    #     ('6', 'Semester 6'),
+    #     ('7', 'Semester 7'),
+    #     ('8', 'Semester 8'),
+    # )
+    # semester = models.CharField(max_length=100, null=True, choices=SEMESTER_CHOICES)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True) 
     research_work = models.ForeignKey(ResearchWork, on_delete=models.CASCADE, null=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     
@@ -66,32 +78,3 @@ class File(models.Model):
     def __str__(self):
         return f"File: {self.filename.name} for Topic: {self.topic.name}"
     
-
-# class Comment(models.Model):
-#     file_comment = models.OneToOneField(File, on_delete=models.CASCADE, related_name='detailed_comment')
-#     text = models.TextField(null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-    
-#     def __str__(self):
-#         return f"Comment for {self.file_comment.filename}"
-
-# class UserChatM2m(models.Model):
-#     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-#     chat = models.ForeignKey("Chat", on_delete=models.CASCADE)
-#     is_admin = models.BooleanField(default=False)
-#     created_at = models.DateTimeField(auto_now_add=True)
-    
-# class Chat(models.Model):
-#     assignment = models.OneToOneField(Assignment, on_delete=models.CASCADE, related_name='chat') #many to many with user
-#     created_at = models.DateTimeField(auto_now_add=True)
-    
-    
-# class Message(models.Model):
-#     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messages')
-#     sender = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='sender')
-#     text = models.TextField()
-#     timestamp = models.DateTimeField(auto_now_add=True)
-    
-#     def __str__(self):
-#         return f"message from sender {self.sender.user.username}: '{self.text[:50]}"
-      

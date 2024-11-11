@@ -254,7 +254,6 @@ def topics_files(request, sub_id, topic_id):
         topic = get_object_or_404(Topic, pk=topic_id)
         files = File.objects.filter(topic=topic, submission=submission).order_by('-upload_date')
         last_uploaded_file = files.first() if files.exists() else None
-        
         if request.method == 'POST':
             file_id = request.POST.get('file_id')
             action = request.POST.get('action')
@@ -334,4 +333,10 @@ def add_user(request):
     else:
         form = UserCreationForm()
         return render(request, 'users/add_user.html', {'form': form})
-        
+
+def chat(request, pk):
+    return render(request, 'users/chat.html')
+
+
+
+
