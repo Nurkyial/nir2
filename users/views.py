@@ -65,7 +65,7 @@ def home(request):
 def student_home(request, pk):
     if request.user.is_authenticated:
         student = get_object_or_404(UserProfile, user__id=pk)
-        teacher = UserProfile.objects.get(role='teacher', user__id='2')
+        teacher = UserProfile.objects.filter(role='teacher').first()
         research_works = ResearchWork.objects.all()
         semester = ['1', '2', '3', '4', '5', '6', '7', '8']
         submissions = Submission.objects.filter(assignment__student=student)
