@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from .models import UserProfile, Group
-from base.models import File, ResearchWork, Submission, Topic, Assignment
+from base.models import File, ResearchWork, Submission, Topic, Assignment, Semester
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -9,6 +9,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
 from .form import UploadFileForm, UserCreationForm
+from datetime import date
+from .utils import SemesterUtils
+from django.http import JsonResponse
 
 # Create your views here.
 def loginPage(request):
@@ -67,17 +70,21 @@ def student_home(request, pk):
         student = get_object_or_404(UserProfile, user__id=pk)
         teacher = UserProfile.objects.filter(role='teacher').first()
         research_works = ResearchWork.objects.all()
-        semester = ['1', '2', '3', '4', '5', '6', '7', '8']
         submissions = Submission.objects.filter(assignment__student=student)
-        
+        current_semester, created = SemesterUtils.get_or_create_current_semester()
+
         try:          
             assignment = Assignment.objects.get(student=student, is_accepted=True)
             teacher_assigned = True 
         except Assignment.DoesNotExist:
             assignment = None
             teacher_assigned = False
+        
+        # Поверяем, назначен ли научный руководитель
+        if not teacher_assigned and request.method == 'POST':
+            return JsonResponse({'error': 'Вы не можете добавить работу, пока не назначен научный руководитель.'}, status=400)
             
-        context = {'research_works':research_works, 'semester':semester, 'student':student, 'submissions': submissions,
+        context = {'research_works':research_works, 'semester':current_semester, 'student':student, 'submissions': submissions,
                    'assignment':assignment, 'teacher_assigned':teacher_assigned}
         
         if request.method == 'POST':  
@@ -175,15 +182,13 @@ def choose_teacher(request, student_id):
     context = {'teachers':teachers, 'student':student, 'chosen_teachers':chosen_teachers}
     return render(request, 'users/choose_teacher.html', context=context)
 
-
-
-     
+    
 # teacher page views
 @login_required
 def teacher_home(request, teacher_id ):
     if request.user.is_authenticated:
         teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
-        assignments = Assignment.objects.filter(teacher=teacher)
+        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True, is_accepted=False)
         context = {'teacher':teacher, 'assignments':assignments}
         if request.method == 'POST':
             action = request.POST.get('action')

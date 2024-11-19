@@ -1,4 +1,6 @@
-{% extends "main.html" %} {% block head %}
+{% extends "main.html" %}
+{% load static %}
+{% block head %}
 <style>
   .clickable-card {
     cursor: pointer;
@@ -6,27 +8,15 @@
   tr {
     cursor: pointer;
   }
-  .chat-icon {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    background-color: #007bff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 24px;
-    text-decoration: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-  .chat-icon:hover {
-    background-color: #0056b3;
-  }
 </style>
-{% endblock %} {% block content %}
+{% block extra_js %}
+<script src="{% static 'js/student_home.js' %}"></script>
+<script>
+  document.querySelector('form').setAttribute('data-teacher-assigned', '{{ teacher_assigned|yesno:"true,false" }}');
+</script>
+{% endblock extra_js %} 
+{% endblock %}
+{% block content %}
 <div class="body flex-grow-1 px-3">
   <div class="container-lg">
     <div class="card mb-4">
@@ -81,9 +71,8 @@
 
     <div class="card mb-4">
       <div class="card-header">
-        <strong>Выбор работы</strong>
+        <strong>{{ semester }}</strong>
       </div>
-
       <div class="card-body">
         <div class="example">
           <table class="table table-hover">
@@ -109,7 +98,6 @@
                   {{submission.assignment.teacher.user.last_name}}
                 </td>
               </tr>
-
               {% endfor %}
             </tbody>
           </table>
@@ -129,15 +117,6 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-4">
-              <label class="form-label" for="semesterSelect">Семестр</label>
-              <select class="form-select" id="semesterSelect" name="semester">
-                <option selected>Choose...</option>
-                {% for sem in semester %}
-                <option>{{sem}}</option>
-                {% endfor %}
-              </select>
-            </div>
             <div class="col-12">
               <button class="btn btn-primary" type="submit">Добавить</button>
             </div>
@@ -148,18 +127,4 @@
     </div>
   </div>
 </div>
-<!-- Иконка чата -->
-<a href="{% url 'chat' pk=student.id%}" class="chat-icon">
-  <i class="fa fa-comments"></i>
-</a>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const clickableRows = document.querySelectorAll(".clickable-row");
-    clickableRows.forEach((row) => {
-      row.addEventListener("click", function () {
-        window.location.href = this.getAttribute("data-href");
-      });
-    });
-  });
-</script>
 {% endblock content %}

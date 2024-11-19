@@ -83,7 +83,6 @@
                 <th style="width: 20%" scope="col">#</th>
                 <th style="width: 20%" scope="col">ФИО студента</th>
                 <th style="width: 20%" scope="col">Группа</th>
-                <th style="width: 20%" scope="col">Активность</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +92,6 @@
                 <th scope="row">{{ forloop.counter }}</th>
                 <td>{{assignment.student.user.last_name}} {{assignment.student.user.first_name}}</td>
                 <td>{{assignment.student.group.group_name}}</td>
-                <td>{{assignment.is_accepted|yesno:"Active, non-active"}}</td>
               </tr>{% endfor %}
             </tbody>
           </table>
