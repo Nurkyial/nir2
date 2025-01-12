@@ -31,8 +31,6 @@ class Assignment(models.Model):
     def __str__(self):
         return f"Assignment for {self.student.user.username} with {self.teacher.user.username}"
 
-from django.utils.timezone import now
-from datetime import timedelta
 
 class Semester(models.Model):
     SPRING = 'Spring'

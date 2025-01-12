@@ -10,7 +10,7 @@
   }
 </style>
 {% block extra_js %}
-<script src="{% static 'js/student_home.js' %}"></script>
+<!-- <script src="{% static 'js/student_home.js' %}"></script> -->
 <script>
   document.querySelector('form').setAttribute('data-teacher-assigned', '{{ teacher_assigned|yesno:"true,false" }}');
 </script>
@@ -88,7 +88,7 @@
               {% for submission in submissions %}
               <tr
                 class="clickable-row"
-                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester subm_id=submission.id %}"
+                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester.id subm_id=submission.id %}"
               >
                 <th scope="row">{{ forloop.counter }}</th>
                 <td>{{ submission.research_work.name }}</td>
@@ -118,6 +118,7 @@
               </select>
             </div>
             <div class="col-12">
+              <input type="text" name="semester" hidden="true" value="{{ semester.id }}">
               <button class="btn btn-primary" type="submit">Добавить</button>
             </div>
           </form>

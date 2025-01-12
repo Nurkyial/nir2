@@ -68,41 +68,56 @@ def home(request):
 def student_home(request, pk):
     if request.user.is_authenticated:
         student = get_object_or_404(UserProfile, user__id=pk)
-        teacher = UserProfile.objects.filter(role='teacher').first()
-        research_works = ResearchWork.objects.all()
-        submissions = Submission.objects.filter(assignment__student=student)
-        current_semester, created = SemesterUtils.get_or_create_current_semester()
-
+        print(f"Student: {student} (ID: {student.id})")
+        
+        # если учитель выбран, то для соотвествующего assignment выбираем все созданные submissions
         try:          
+            # Находим согласованное assignment для студента
             assignment = Assignment.objects.get(student=student, is_accepted=True)
+            print(1)
+            # Получаем учителя из этого assignment
+            teacher = assignment.teacher
             teacher_assigned = True 
+            print(2)
+            # Получаем список всех исследовательских работ
+            research_works = ResearchWork.objects.all()
+            print(3)
+            # Получаем все отправленные задания (submissions) для этого студента
+            submissions = Submission.objects.filter(assignment__student=student)
+            current_semester, _ = SemesterUtils.get_or_create_current_semester()
+            print(4)
         except Assignment.DoesNotExist:
+            print('все плохо')
             assignment = None
+            teacher = None
             teacher_assigned = False
         
         # Поверяем, назначен ли научный руководитель
-        if not teacher_assigned and request.method == 'POST':
+        if not teacher_assigned:
             return JsonResponse({'error': 'Вы не можете добавить работу, пока не назначен научный руководитель.'}, status=400)
             
         context = {'research_works':research_works, 'semester':current_semester, 'student':student, 'submissions': submissions,
                    'assignment':assignment, 'teacher_assigned':teacher_assigned}
         
         if request.method == 'POST':  
-            research_work_id = request.POST.get('research_work_id')  
-            semester = request.POST.get('semester')
-            if research_work_id and semester:
-                research_work = ResearchWork.objects.get(id=research_work_id)
+            print(6)
+            research_work_id: int = request.POST.get('research_work_id')  
+            semester_id: int = request.POST.get('semester')
+            print("rw", research_work_id, "sem", semester_id)
+            if research_work_id and semester_id:
+                # research_work = ResearchWork.objects.get(id=research_work_id)
                 assignment = Assignment.objects.get(student=student, teacher=teacher)
-                
+                print(10)
                 Submission.objects.create(
                     assignment = assignment,
-                    semester = semester,
-                    research_work = research_work
+                    semester_id = semester_id,
+                    research_work_id = research_work_id
                 )
                 messages.success(request, 'Submission successfully created')
 
                 return redirect('student-home', pk=pk)
             else:
+                print(15)
                 messages.success(request, 'Invalid submission')
             
         return render(request, 'users/student_home.html', context)
@@ -185,14 +200,18 @@ def choose_teacher(request, student_id):
     
 # teacher page views
 @login_required
-def teacher_home(request, teacher_id ):
+def teacher_home(request, teacher_id):
     if request.user.is_authenticated:
-        teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
-        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True, is_accepted=False)
+        # teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
+        teacher = get_object_or_404(UserProfile, user__id=teacher_id)
+        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True)
         context = {'teacher':teacher, 'assignments':assignments}
+
+
         if request.method == 'POST':
             action = request.POST.get('action')
             assignment_id = request.POST.get('assignment_id')
+
             
             try:
                 assignment = Assignment.objects.get(pk=assignment_id, teacher=teacher)
@@ -321,27 +340,3 @@ def admin_submission_details(request, sub_id):
     else:
         messages.error(request, 'Invalid user')
         return redirect('login')
-    
-
-
-
-@login_required
-def add_user(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'User created successfully')
-            return redirect('add-user')
-        else:
-            messages.error(request, 'Please correct the error below.')
-    else:
-        form = UserCreationForm()
-        return render(request, 'users/add_user.html', {'form': form})
-
-def chat(request, pk):
-    return render(request, 'users/chat.html')
-
-
-
-
