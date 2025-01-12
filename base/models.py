@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import UserProfile
 from django.utils.timezone import now
+from django.utils.text import slugify
 
 # Create your models here.
 class ResearchWork(models.Model):

@@ -74,18 +74,17 @@ def student_home(request, pk):
         try:          
             # Находим согласованное assignment для студента
             assignment = Assignment.objects.get(student=student, is_accepted=True)
-            print(1)
             # Получаем учителя из этого assignment
             teacher = assignment.teacher
             teacher_assigned = True 
-            print(2)
             # Получаем список всех исследовательских работ
             research_works = ResearchWork.objects.all()
-            print(3)
             # Получаем все отправленные задания (submissions) для этого студента
             submissions = Submission.objects.filter(assignment__student=student)
             current_semester, _ = SemesterUtils.get_or_create_current_semester()
-            print(4)
+            print('----------------')
+            print(current_semester)
+            print('----------------')
         except Assignment.DoesNotExist:
             print('все плохо')
             assignment = None
@@ -96,21 +95,19 @@ def student_home(request, pk):
         if not teacher_assigned:
             return JsonResponse({'error': 'Вы не можете добавить работу, пока не назначен научный руководитель.'}, status=400)
             
-        context = {'research_works':research_works, 'semester':current_semester, 'student':student, 'submissions': submissions,
+        context = {'research_works':research_works, 'semester':str(current_semester), 'student':student, 'submissions': submissions,
                    'assignment':assignment, 'teacher_assigned':teacher_assigned}
         
         if request.method == 'POST':  
-            print(6)
             research_work_id: int = request.POST.get('research_work_id')  
-            semester_id: int = request.POST.get('semester')
-            print("rw", research_work_id, "sem", semester_id)
-            if research_work_id and semester_id:
+            # semester_id: int = request.POST.get('semester')
+            print("rw = ", research_work_id, "sem = ", current_semester)
+            if research_work_id:
                 # research_work = ResearchWork.objects.get(id=research_work_id)
                 assignment = Assignment.objects.get(student=student, teacher=teacher)
-                print(10)
                 Submission.objects.create(
                     assignment = assignment,
-                    semester_id = semester_id,
+                    semester = current_semester,
                     research_work_id = research_work_id
                 )
                 messages.success(request, 'Submission successfully created')
@@ -126,7 +123,7 @@ def student_home(request, pk):
         context = {'page':page}
         return render(request, 'users/login_register.html', context=context)
 
-def research_work_detail(request, rw_id, semester, subm_id):
+def research_work_detail(request, rw_id, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
     # submissions = Submission.objects.filter(research_work=research_work, semester=semester)
     submissions = Submission.objects.filter(assignment__student=request.user.userprofile)

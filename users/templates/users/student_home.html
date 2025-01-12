@@ -5,7 +5,7 @@
   .clickable-card {
     cursor: pointer;
   }
-  tr {
+  tr { 
     cursor: pointer;
   }
 </style>
@@ -88,7 +88,7 @@
               {% for submission in submissions %}
               <tr
                 class="clickable-row"
-                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id semester=submission.semester.id subm_id=submission.id %}"
+                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id subm_id=submission.id %}"
               >
                 <th scope="row">{{ forloop.counter }}</th>
                 <td>{{ submission.research_work.name }}</td>
@@ -118,7 +118,7 @@
               </select>
             </div>
             <div class="col-12">
-              <input type="text" name="semester" hidden="true" value="{{ semester.id }}">
+              <!-- <input type="submit" name="semester" hidden="true" value="{{ semester.id }}"> -->
               <button class="btn btn-primary" type="submit">Добавить</button>
             </div>
           </form>
@@ -128,4 +128,15 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableRows = document.querySelectorAll(".clickable-row");
+    clickableRows.forEach((row) => {
+      row.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
+      });
+    });
+  });
+</script>
 {% endblock content %}
