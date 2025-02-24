@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from .models import UserProfile, Group
-from base.models import File, ResearchWork, Submission, Topic, Assignment, Semester
+from base.models import File, ResearchWork, Submission, Topic, Assignment, Semester, TopicSubmission
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -11,39 +11,144 @@ from django.core.files.storage import FileSystemStorage
 from .form import UploadFileForm, UserCreationForm
 from datetime import date
 from .utils import SemesterUtils
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from .fastapi_client import fastapi_request
 
-# Create your views here.
+def register_user_in_fastapi(data):
+    """ Регистрирует пользователя в FastAPI """
+
+    print("Отправляем в FastAPI для регистрации:", data)
+
+    # Отправляем запрос на регистрацию
+    register_response = fastapi_request('auth/register', method='POST', data=data)
+
+    return register_response
+
 def loginPage(request):
     page = 'login'
+    print("29")
     
     if request.user.is_authenticated:
-        # return redirect('student-home', pk=request.user.userprofile.pk)
+        print("32")
         return redirect_dashboard(request.user)
     
     if request.method == 'POST':
+        print("35")
         username = request.POST.get('username').lower()
         password = request.POST.get('password')
 
+        data = {"username": username, "password": password}
+        print("Отправляем в FastAPI:", data)
+
+        response = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
+        print("FastAPI Response:", response)
+
+        # Если пользователя нет в FastAPI, перенаправляем на страницу регистрации
+        if response is None:
+            print("FastAPI вернул null. Ошибка аутентификации.")
+            messages.error(request, "Ошибка аутентификации. Сервер не отвечает.")
+            return render(request, 'users/login_register.html', {'page': page, 'username': username})
+        
+        if "error" in response:
+            if "Invalid credentials" in response["error"]:
+                page = 'register'
+                print("Пользователь не найден в FastAPI. Переходим на страницу регистрации")
+                return render(request, 'users/login_register.html', {'page': page, 'username': username, 'password': password})
+            raise Exception("Unexpected error from Fast API")
+
         try:
             user = User.objects.get(username=username)
-        except:
-            messages.error(request, 'User does not exist')
-        
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            # return redirect('student-home', pk=request.user.userprofile.pk)
-            return redirect_dashboard(user)
-        else:
-            messages.error(request, "username or password does not exist")
-            
+        except User.DoesNotExist:
+            resp = fastapi_request(f"/api/v1/user/{username}/info", ...)
+            user = User.objects.create(username=username, password=password)
+            UserProfile.objects.create(**resp)
+        login(request, user)
+
+        return redirect_dashboard(user)
     
-    context = {'page':page}
+    print("63")
+    context = {'page': page}
     return render(request, 'users/login_register.html', context=context)
+
+def registerPage(request):
+    if request.method == 'POST':
+        username = request.POST.get('username').lower()
+        password = request.POST.get('password')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        middle_name = request.POST.get('middle_name')
+        email = request.POST.get('email')
+        role = request.POST.get('role')
+        group_name = request.POST.get('group')
+
+        register_data = {
+            "username": username,
+            "first_name": first_name,
+            "last_name": last_name,
+            "middle_name": middle_name,
+            "email": email,
+            "group": group_name,  
+            "password": password,
+            "role": role  
+        }
+
+        # проверяем передана ли группа
+        group = None
+        if group_name:
+            group, created = Group.objects.get_or_create(group_name=group_name)
+
+        # Создаем пользователя
+        user, created = User.objects.get_or_create(username=username, defaults={"email":email, "first_name":first_name, "last_name":last_name})
+        user.set_password(password)
+        user.save()
+
+        
+        # регистрируем в fast api
+        register_response = register_user_in_fastapi(register_data)
+        print(f"getting register_response from function {register_response}")
+
+        if register_response is None or not isinstance(register_response, list):
+            messages.error(request, f"Ошибка регистрации: register_response")
+            return render(request, 'users/login_register.html', {'page': 'register', 'username': username, 'password': password})
+        
+        user_data = None
+        profile_data = None
+        if len(register_response) >= 2:
+            user_data = register_response[0]
+            profile_data = register_response[1]
+        elif len(register_response) == 1:
+            user_data = register_response[0]
+
+        if not user_data or "username" not in user_data:
+            messages.error(request, "Ошибка регистрации: некорректные данные от сервера")
+            return render(request, 'users/login_register.html', {'page': 'register', 'username': username, 'password': password})
+        
+        # Создаем профиль пользователя
+        print(f"Creating UserProfile for user: {user.username}, role: {profile_data.get('role', 'student')}, user_id: {profile_data.get('user_id')}")
+        UserProfile.objects.get_or_create(user=user, defaults={"middle_name":profile_data.get("middle_name", ""), "role":profile_data.get("role", "student"), "group":group})
+
+        print('После успешной регистрации сразу пробуем залогинить')
+        data = {"username": username, "password": password}
+        print("Отправляем в FastAPI (логин и пароль):", data)
+        response = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
+
+        print("FastAPI Response (логин):", response)
+
+        if response is None:
+            print("FastAPI вернул null, но это нормально. Логиним пользователя в Django.")
+
+        login(request, user)
+
+        return redirect_dashboard(user)
+
+    return redirect('login')
+
 
 def redirect_dashboard(user):
     user_profile = get_object_or_404(UserProfile, user=user)
+    if not user_profile:
+        messages.error("Ошибка: профиль пользователя не найден.")
+        return redirect('login')
     if user_profile.role == 'student':
         return redirect('student-home', pk=user_profile.pk)
     elif user_profile.role == 'teacher':
@@ -134,31 +239,58 @@ def research_work_detail(request, rw_id, subm_id):
 
 
 def upload_page(request, rw_id, topic_id, subm_id):
-    research_work = get_object_or_404(ResearchWork, pk=rw_id)
-    topic =  get_object_or_404(Topic, pk=topic_id)
-    submission = get_object_or_404(Submission, pk=subm_id)
+    try:
+        research_work = get_object_or_404(ResearchWork, pk=rw_id)
+    except Http404:
+        print(f"ResearchWork with id={rw_id} not found.")
+        raise
+
+    try:
+        topic =  get_object_or_404(Topic, pk=topic_id)
+    except Http404:
+        print(f"Topic with id={topic_id} not found.")
+        raise
+
+    try:
+        submission = get_object_or_404(Submission, pk=subm_id)
+    except Http404:
+        print(f"Submission with id={subm_id} not found.")
+        raise
+    try:
+        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
+    except Http404:
+        print(f"TopicSubmission with topic_id={topic_id} and submission_id={subm_id} not found.")
+        raise
+
     form = UploadFileForm()  # This ensures the form is available if needed
-    file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
-    context = {'research_work':research_work, 'topic':topic, 'submission':submission, 'form': form, 'file_list': file_list  }
+    file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
+    print(ResearchWork.objects.filter(pk=1).exists())
+    context = {'research_work':research_work, 'topic':topic, 'submission':submission, 'form': form, 'file_list': file_list}
     return render(request, 'users/upload_file.html', context)
 
 
 def upload_file(request, subm_id, topic_id):
     submission = get_object_or_404(Submission, pk=subm_id)
     topic = get_object_or_404(Topic, pk=topic_id)
+
+    try:
+        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
+    except Http404:
+        print(f"TopicSubmission with topic_id={topic_id} and submission_id={subm_id} not found.")
+        raise
+
     form = UploadFileForm()
-    file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
+    file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
     context = {'submission':submission, 'topic':topic, 'form': form, 'file_list':file_list}
-    # print("Files loaded:", file_list.count())
     
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid(): 
             file_instance = form.save(commit=False)
-            file_instance.topic = topic
-            file_instance.submission = submission
+            file_instance.topic_submission = topic_submission
+            # file_instance.submission = submission
             file_instance.save()
-            file_list = File.objects.filter(submission=submission, topic=topic).order_by('-upload_date')
+            file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
             context.update({'file_list':file_list})
             messages.success(request, 'File succesfully uploaded')
             # return render(request, 'users/upload_file.html', context=context)
@@ -201,8 +333,8 @@ def teacher_home(request, teacher_id):
     if request.user.is_authenticated:
         # teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
         teacher = get_object_or_404(UserProfile, user__id=teacher_id)
-        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True)
-        context = {'teacher':teacher, 'assignments':assignments}
+        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True, is_accepted=False)
+        context = {'teacher':teacher, 'assignments':assignments} 
 
 
         if request.method == 'POST':
@@ -273,8 +405,10 @@ def topics_files(request, sub_id, topic_id):
     if request.user.is_authenticated:
         submission = get_object_or_404(Submission, pk=sub_id)
         topic = get_object_or_404(Topic, pk=topic_id)
-        files = File.objects.filter(topic=topic, submission=submission).order_by('-upload_date')
-        last_uploaded_file = files.first() if files.exists() else None
+        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
+        files = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
+        # last_uploaded_file = files.first() if files.exists() else None
+        last_uploaded_file = files.filter(is_reviewed=False).first()
         if request.method == 'POST':
             file_id = request.POST.get('file_id')
             action = request.POST.get('action')
@@ -292,6 +426,9 @@ def topics_files(request, sub_id, topic_id):
                 messages.success(request, 'File rejected.')
             
             file_object.save()
+
+            files = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
+            last_uploaded_file = files.filter(is_reviewed=False).first()
             return redirect('topics-files', sub_id=sub_id, topic_id=topic_id)
             
             
@@ -337,3 +474,21 @@ def admin_submission_details(request, sub_id):
     else:
         messages.error(request, 'Invalid user')
         return redirect('login')
+    
+"""
+class LoginResponse(Model):
+    username: str
+    password: str
+    middle_name: str
+
+
+d = {
+    "username": "str",
+    "password": "str",
+    "middle_name": "str",
+}
+
+pd_obj = LoginResponse(**d)
+d['username']
+pd_obj.username
+"""

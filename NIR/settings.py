@@ -144,4 +144,5 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+FASTAPI_BASE_URL = "http://89.150.34.163:8000/api/v1"
 

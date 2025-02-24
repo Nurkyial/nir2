@@ -95,6 +95,13 @@ class Submission(models.Model):
     def __str__(self):
         research_work_name = "No Research Work Assigned" if self.research_work is None else self.research_work.name
         return f"{research_work_name} - for student {self.assignment.student.user.username} in semester - {self.semester}"
+    
+    def create_topic_submission(self):
+        """Создаёт TopicSubmission для всех тем, связанных с исследовательской работой."""
+        if self.research_work:
+            topics = Topic.objects.filter(research_work=self.research_work)
+            for topic in topics:
+                TopicSubmission.objects.get_or_create(submission=self, topic=topic)
 
 class TopicSubmission(models.Model):
     submission = models.ForeignKey(Submission, related_name='topic_submissions', on_delete=models.CASCADE)

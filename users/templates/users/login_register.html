@@ -53,7 +53,7 @@
                         <svg class="icon">
                           <use
                             xlink:href="{% static 'assets/free.svg#cil-lock-locked' %}"
-                          ></use></svg
+                          ></use></svg>
                       ></span>
                       <input
                         class="form-control"
@@ -72,6 +72,62 @@
                         <button class="btn btn-link px-0" type="button">
                           Forgot password?
                         </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% elif page == 'register' %}
+    <div class="bg-light min-vh-100 d-flex flex-row align-items-center">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="card-group d-block d-md-flex row">
+              <div class="card col-md-7 p-4 mb-0">
+                <div class="card-body">
+                  <h1>Register</h1>
+                  <p class="text-medium-emphasis">Create your account</p>
+                  <form method="POST" action="{% url 'register' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="username" value="{{ username }}" />
+                    <input type="hidden" name="password" value="{{ password }}" />
+                    
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="first_name" placeholder="First Name" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="last_name" placeholder="Last Name" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="middle_name" placeholder="Middle Name (optional)" />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="email" name="email" placeholder="Email" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="group" placeholder="group" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <select class="form-control" name="role" id="roleSelect">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    
+                    <!-- Поле group_id появится, только если выбрана роль "student" -->
+                    <div class="input-group mb-3" id="groupField" style="display: none;">
+                      <input class="form-control" type="number" name="group_id" placeholder="Group ID (если студент)" />
+                    </div>
+
+                    <div class="row">
+                      <div class="col-6">
+                        <button class="btn btn-primary px-4" type="submit">Register</button>
                       </div>
                     </div>
                   </form>
