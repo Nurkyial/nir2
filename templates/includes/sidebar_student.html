@@ -12,24 +12,37 @@
   <ul class="sidebar-nav" data-coreui="navigation" data-simplebar="">
     <li class="nav-title">Главная</li>
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'home'%}">
+      <a class="nav-link" href="{% url 'student-home' user_id %}"> <!-- здесь обязательно нужно исправить, чтобы переводил в нужную стрничку для каждой роли -->
         <svg class="nav-icon">
           <use
             xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-home"
           ></use></svg
-        >Home</a
+        >Личная страница</a
       >
     </li>
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'choose-teacher' student_id=user_profile_pk%}"
+        href="{% url 'choose-teacher' user_id=user_profile_pk%}"
       >
         <svg class="nav-icon">
           <use
             xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-cursor"
           ></use></svg
-        >Выбор научрука</a
+        >Выбор научного <br> руководителя</a
+      >
+    </li>
+
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        href="{% url 'choose-teacher' user_id=user_profile_pk%}"
+      >
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-envelope-closed"
+          ></use></svg
+        >Отправленные заявки</a
       >
     </li>
 
@@ -53,8 +66,22 @@
           >
         </li>
 
+
         {% endfor %}
       </ul>
+    </li>
+
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        href="#"
+      >
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-mobile"
+          ></use></svg
+        >Мобильное <br> приложение</a
+      >
     </li>
   </ul>
   <button

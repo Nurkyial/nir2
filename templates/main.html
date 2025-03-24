@@ -45,22 +45,20 @@
     <!-- prettier-ignore-end -->
   </head>
   <body>
-    <!-- prettier-ignore -->
-    {% if user.is_authenticated %} 
-    {% if user.userprofile.role == 'student' %}
-    {% include "includes/sidebar.html"%} 
-    {% elif user.userprofile.role == 'teacher' %} 
+    <!-- prettier-ignore --> 
+    {% if role == 'Student' %}
+    {% include "includes/sidebar_student.html"%}  
+    {% elif role == 'Teacher' %} 
     {% include "includes/sidebar_teacher.html" %} 
-    {% elif user.userprofile.role == 'admin' %}
-    {% include "includes/sidebar_admin.html"%} 
-    {% endif %} 
     {% endif %}
     <!-- prettier-ignore -->
 
     <div class="wrapper d-flex flex-column min-vh-100 bg-light">
       {% include 'includes/navigation.html' %}
       <!-- prettier-ignore-start -->
-      {% block content %} {% endblock content %}
+      <main class="flex-grow-1">
+        {% block content %}{% endblock content %}
+      </main>
       <!-- prettier-ignore-end -->
       {% include 'includes/footer.html'%}
     </div>

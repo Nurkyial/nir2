@@ -56,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # "NIR.middleware.FastAPIAuthMiddleware",
 ]
 
 ROOT_URLCONF = 'NIR.urls'
@@ -145,4 +146,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 FASTAPI_BASE_URL = "http://89.150.34.163:8000/api/v1"
+
+# AUTHENTICATION_BACKENDS = ["users.auth_backends.FastAPIAuthBackend"]
+
 

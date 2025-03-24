@@ -15,13 +15,49 @@
   document.querySelector('form').setAttribute('data-teacher-assigned', '{{ teacher_assigned|yesno:"true,false" }}');
 </script>
 {% endblock extra_js %} 
+
+<style>
+  .profile-card {
+    text-align: center;
+  }
+  .profile-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+</style>
 {% endblock %}
 {% block content %}
 <div class="body flex-grow-1 px-3">
   <div class="container-lg">
+    <div class="row">
+      <!-- Левая часть (Фото + ФИО + Группа) -->
+      <div class="col-md-4">
+        <div class="card profile-card p-4">
+          <!-- ФОТО -->
+          <img src="{% static 'images/cat.png' %}" alt="Фото профиля" class="profile-image-rectangle mb-3">
+
+          <!-- ФИО -->
+          <h5 class="mt-3">{{ data.last_name }} {{ data.first_name}} 
+            {% if data.middle_name and data.middle_name != "string" %}
+            {{ data.middle_name }}
+            {% endif %}
+          </h5>
+          <p class="text-muted">Группа: {{ data.group_id }}</p>
+          <p class="text-muted">Почта: {{ data.email }}</p>
+          <!-- Кнопка редактирования -->
+          <a href="{% url 'edit-profile' user_id %}" class="btn btn-outline-primary btn-sm mt-2">
+            <i class="fas fa-edit"></i> Редактировать
+          </a>
+        </div>
+      </div>
+      
+    <!-- Правая часть (Научный руководитель + Работы) -->
+    <div class="col-md-8"> 
     <div class="card mb-4">
       <div class="card-header">
-        <strong>Выбор научного руководителя</strong>
+        <strong>Мой научный руководитель</strong>
       </div>
       <div class="card-body">
         <div class="example">
@@ -34,30 +70,32 @@
               <div class="row align-items-center justify-content-between">
                 <div class="col">
                   <!-- prettier-ignore -->
-                  {% if teacher_assigned %} 
-                  {{ assignment.teacher.user.first_name }} 
-                  {{ assignment.teacher.user.last_name }} 
+                  {% if is_accepted %} 
+                  {{ teacher_last_name }} {{teacher_first_name}}
+                  {% if teacher_middle_name and teacher_middle_name != "string" %}
+                  {{ teacher_middle_name }}
+                  {% endif %}
                   {% else %} 
-                  ФИО научрука
+                  Научный руководитель не выбран
                   {% endif %}
                   <!-- prettier-ignore -->
                 </div>
 
                 <div class="col-auto">
                   <!-- prettier-ignore -->
-                  {% if teacher_assigned %}
+                  {% if is_accepted %}
                   <a
-                    href="{% url 'choose-teacher' student_id=student.id %}"
+                    href="{% url 'choose-teacher' user_id %}"
                     class="btn btn-primary"
                   >
                     Изменить</a
                   >
                   {% else %}
                   <a
-                    href="{% url 'choose-teacher' student_id=student.id %}"
+                    href="{% url 'choose-teacher' user_id %}"
                     class="btn btn-danger"
                   >
-                    Не выбран</a
+                    Выбрать</a
                   >
                   {% endif %}
                   <!-- prettier-ignore -->
@@ -68,65 +106,48 @@
         </div>
       </div>
     </div>
-
-    <div class="card mb-4">
+  
+    <!-- Блок "Мои работы" -->
+    <div class="card">
       <div class="card-header">
-        <strong>{{ semester }}</strong>
+        <strong>Мои работы</strong>
       </div>
       <div class="card-body">
         <div class="example">
           <table class="table table-hover">
             <thead>
               <tr>
-                <th style="width: 20%" scope="col">#</th>
                 <th style="width: 20%" scope="col">Работа</th>
                 <th style="width: 20%" scope="col">Семестр</th>
                 <th style="width: 20%" scope="col">Научный руководитель</th>
               </tr>
             </thead>
             <tbody>
-              {% for submission in submissions %}
+              {% if submission_values%}
+              {% for submission in submission_values %} 
               <tr
                 class="clickable-row"
                 data-href="{% url 'research-work-detail' rw_id=submission.research_work.id subm_id=submission.id %}"
               >
-                <th scope="row">{{ forloop.counter }}</th>
                 <td>{{ submission.research_work.name }}</td>
                 <td>{{ submission.semester }}</td>
                 <td>
-                  {{submission.assignment.teacher.user.first_name}}
-                  {{submission.assignment.teacher.user.last_name}}
+                  {{submission.assignment.teacher_id}} <!-- Здесь должно быть фио учителя -->
                 </td>
               </tr>
               {% endfor %}
+              {% else %}
+              <tr>
+                <td>Преподователь еще не определил работу</td>
+              </tr>
+              {% endif %}
             </tbody>
           </table>
-          <br />
-          <form class="row g-3" method="POST" action="">
-            {% csrf_token %}
-            <div class="col-md-6">
-              <label class="form-label" for="researchWorkSelect">Работа</label>
-              <select
-                class="form-select"
-                id="researchWorkSelect"
-                name="research_work_id"
-              >
-                <option selected>Choose...</option>
-                {% for work in research_works %}
-                <option value="{{work.id}}">{{work.name}}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-12">
-              <!-- <input type="submit" name="semester" hidden="true" value="{{ semester.id }}"> -->
-              <button class="btn btn-primary" type="submit">Добавить</button>
-            </div>
-          </form>
-          <br />
         </div>
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <script>

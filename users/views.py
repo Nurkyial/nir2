@@ -14,147 +14,60 @@ from .utils import SemesterUtils
 from django.http import JsonResponse, Http404
 from .fastapi_client import fastapi_request
 
-def register_user_in_fastapi(data):
-    """ Регистрирует пользователя в FastAPI """
-
-    print("Отправляем в FastAPI для регистрации:", data)
-
-    # Отправляем запрос на регистрацию
-    register_response = fastapi_request('auth/register', method='POST', data=data)
-
-    return register_response
-
 def loginPage(request):
     page = 'login'
-    print("29")
-    
-    if request.user.is_authenticated:
-        print("32")
-        return redirect_dashboard(request.user)
+    print(1)
     
     if request.method == 'POST':
-        print("35")
+        print(2)
         username = request.POST.get('username').lower()
         password = request.POST.get('password')
-
+ 
         data = {"username": username, "password": password}
+
         print("Отправляем в FastAPI:", data)
+        response, status_code = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
+        user_id = response["data"].get("id")
+        print(f"FastAPI Response: {response} and status_code: {status_code}")
 
-        response = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
-        print("FastAPI Response:", response)
-
-        # Если пользователя нет в FastAPI, перенаправляем на страницу регистрации
-        if response is None:
-            print("FastAPI вернул null. Ошибка аутентификации.")
-            messages.error(request, "Ошибка аутентификации. Сервер не отвечает.")
-            return render(request, 'users/login_register.html', {'page': page, 'username': username})
-        
-        if "error" in response:
-            if "Invalid credentials" in response["error"]:
-                page = 'register'
-                print("Пользователь не найден в FastAPI. Переходим на страницу регистрации")
-                return render(request, 'users/login_register.html', {'page': page, 'username': username, 'password': password})
-            raise Exception("Unexpected error from Fast API")
-
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            resp = fastapi_request(f"/api/v1/user/{username}/info", ...)
-            user = User.objects.create(username=username, password=password)
-            UserProfile.objects.create(**resp)
-        login(request, user)
-
-        return redirect_dashboard(user)
+        user = authenticate(request, username=username, password=password)
+        print(22, user)
+        if user:
+            print(3)
+            login(request, user)
+            return redirect_dashboard(user, user_id)
+        else:
+            user = User.objects.create(username=username)
+            user.set_password(password)  
+            user.save()
     
-    print("63")
-    context = {'page': page}
-    return render(request, 'users/login_register.html', context=context)
-
-def registerPage(request):
-    if request.method == 'POST':
-        username = request.POST.get('username').lower()
-        password = request.POST.get('password')
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        middle_name = request.POST.get('middle_name')
-        email = request.POST.get('email')
-        role = request.POST.get('role')
-        group_name = request.POST.get('group')
-
-        register_data = {
-            "username": username,
-            "first_name": first_name,
-            "last_name": last_name,
-            "middle_name": middle_name,
-            "email": email,
-            "group": group_name,  
-            "password": password,
-            "role": role  
-        }
-
-        # проверяем передана ли группа
-        group = None
-        if group_name:
-            group, created = Group.objects.get_or_create(group_name=group_name)
-
-        # Создаем пользователя
-        user, created = User.objects.get_or_create(username=username, defaults={"email":email, "first_name":first_name, "last_name":last_name})
-        user.set_password(password)
-        user.save()
-
-        
-        # регистрируем в fast api
-        register_response = register_user_in_fastapi(register_data)
-        print(f"getting register_response from function {register_response}")
-
-        if register_response is None or not isinstance(register_response, list):
-            messages.error(request, f"Ошибка регистрации: register_response")
-            return render(request, 'users/login_register.html', {'page': 'register', 'username': username, 'password': password})
-        
-        user_data = None
-        profile_data = None
-        if len(register_response) >= 2:
-            user_data = register_response[0]
-            profile_data = register_response[1]
-        elif len(register_response) == 1:
-            user_data = register_response[0]
-
-        if not user_data or "username" not in user_data:
-            messages.error(request, "Ошибка регистрации: некорректные данные от сервера")
-            return render(request, 'users/login_register.html', {'page': 'register', 'username': username, 'password': password})
-        
-        # Создаем профиль пользователя
-        print(f"Creating UserProfile for user: {user.username}, role: {profile_data.get('role', 'student')}, user_id: {profile_data.get('user_id')}")
-        UserProfile.objects.get_or_create(user=user, defaults={"middle_name":profile_data.get("middle_name", ""), "role":profile_data.get("role", "student"), "group":group})
-
-        print('После успешной регистрации сразу пробуем залогинить')
-        data = {"username": username, "password": password}
-        print("Отправляем в FastAPI (логин и пароль):", data)
-        response = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
-
-        print("FastAPI Response (логин):", response)
-
-        if response is None:
-            print("FastAPI вернул null, но это нормально. Логиним пользователя в Django.")
-
-        login(request, user)
-
-        return redirect_dashboard(user)
-
-    return redirect('login')
+        messages.error(request, "Неверные учетные данные")
+ 
+    context = {"page":page}
+    return render(request, 'users/login.html', context=context)
 
 
-def redirect_dashboard(user):
-    user_profile = get_object_or_404(UserProfile, user=user)
-    if not user_profile:
+def redirect_dashboard(user, user_id):
+    print(f"username в джанго: {user.username}")
+    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET")
+    print(f"status code: {status_code} and {"data" not in response}")
+
+    if status_code != 200 or "data" not in response:
+        print("Ошибка получения пользователя")
+        return redirect("login")
+    
+    user_role = response["data"].get("role")
+    print(f'user role: {user_role}')
+    print(4)
+    if not user_role:
         messages.error("Ошибка: профиль пользователя не найден.")
         return redirect('login')
-    if user_profile.role == 'student':
-        return redirect('student-home', pk=user_profile.pk)
-    elif user_profile.role == 'teacher':
-        return redirect('teacher-home', teacher_id=user_profile.pk)
-    elif user_profile.role == 'admin':
-        return redirect('admin-home', admin_id=user_profile.pk)
+    if user_role.lower() == 'student':
+        print(5)
+        return redirect('student-home', user_id=user_id)
+    elif user_role.lower() == 'teacher':
+        print(6)
+        return redirect('teacher-home', teacher_id=user_id)
     else:
         messages.error('Unknown user')
         return redirect('login')
@@ -163,70 +76,86 @@ def logoutUser(request):
     logout(request)
     return redirect('login')
     
-def home(request):
-    if request.user.is_authenticated:
-        return redirect('student-home', pk=request.user.userprofile.pk)
-    return redirect('login')
-
 # Student page views
 @login_required
-def student_home(request, pk):
-    if request.user.is_authenticated:
-        student = get_object_or_404(UserProfile, user__id=pk)
-        print(f"Student: {student} (ID: {student.id})")
-        
-        # если учитель выбран, то для соотвествующего assignment выбираем все созданные submissions
-        try:          
-            # Находим согласованное assignment для студента
-            assignment = Assignment.objects.get(student=student, is_accepted=True)
-            # Получаем учителя из этого assignment
-            teacher = assignment.teacher
-            teacher_assigned = True 
-            # Получаем список всех исследовательских работ
-            research_works = ResearchWork.objects.all()
-            # Получаем все отправленные задания (submissions) для этого студента
-            submissions = Submission.objects.filter(assignment__student=student)
-            current_semester, _ = SemesterUtils.get_or_create_current_semester()
-            print('----------------')
-            print(current_semester)
-            print('----------------')
-        except Assignment.DoesNotExist:
-            print('все плохо')
-            assignment = None
-            teacher = None
-            teacher_assigned = False
-        
-        # Поверяем, назначен ли научный руководитель
-        if not teacher_assigned:
-            return JsonResponse({'error': 'Вы не можете добавить работу, пока не назначен научный руководитель.'}, status=400)
-            
-        context = {'research_works':research_works, 'semester':str(current_semester), 'student':student, 'submissions': submissions,
-                   'assignment':assignment, 'teacher_assigned':teacher_assigned}
-        
-        if request.method == 'POST':  
-            research_work_id: int = request.POST.get('research_work_id')  
-            # semester_id: int = request.POST.get('semester')
-            print("rw = ", research_work_id, "sem = ", current_semester)
-            if research_work_id:
-                # research_work = ResearchWork.objects.get(id=research_work_id)
-                assignment = Assignment.objects.get(student=student, teacher=teacher)
-                Submission.objects.create(
-                    assignment = assignment,
-                    semester = current_semester,
-                    research_work_id = research_work_id
-                )
-                messages.success(request, 'Submission successfully created')
+def student_home(request, user_id):
+    print("=== Student Home View Started ===")
+    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    data = response.get("data", {})
+    role = data.get("role", None)
+    assignment_subordinate = data.get("assignment_subordinate", []) # список всех отпрвленных заявок
+    last_accepted_assignment = data.get("last_accepted_assignment_subordinate", {})
 
-                return redirect('student-home', pk=pk)
-            else:
-                print(15)
-                messages.success(request, 'Invalid submission')
-            
-        return render(request, 'users/student_home.html', context)
+    if last_accepted_assignment:
+        assignment_id = last_accepted_assignment.get("id", None)
+        is_accepted = last_accepted_assignment.get("is_accepted", None)
+        is_reviewed = last_accepted_assignment.get("is_reviewed", None)
+        teacher_id = last_accepted_assignment.get("teacher_id", None)
+        status = last_accepted_assignment.get("status", None)
     else:
-        page = 'login'
-        context = {'page':page}
-        return render(request, 'users/login_register.html', context=context)
+        assignment_id = None
+        is_accepted = None
+        is_reviewed = None
+        teacher_id = None
+        status = None
+
+    research_works = []
+    submission_values = []
+
+    print(7)
+    try:                        
+        print(f"assignment from fastapi: {last_accepted_assignment}")
+        
+        if is_accepted:
+            # Получаем данные о преподавателе
+            assignment_response, assignment_status_code = fastapi_request(f"assignment/{assignment_id}", method="GET", use_query_params=True)
+            assignment_data = assignment_response.get("data", {})
+            teacher = assignment_data.get("teacher", {})
+            teacher_id = teacher.get("teacher_id", None)
+            teacher_first_name = teacher.get("first_name", None)
+            teacher_last_name = teacher.get("last_name", None)
+            teacher_middle_name = teacher.get("middle_name", None)
+
+            print(f"Teacher info: {teacher}")
+
+            # Если нучный руководитель назначен, загружаем исследования и отправленные задания
+            if teacher:
+                submission_response, submission_status_code = fastapi_request(f"assignment/{assignment_id}/submissions", method="GET", use_query_params=True)
+                if submission_status_code == 200:
+                    submission_values = submission_response.get("values", [])
+                    research_works = ResearchWork.objects.all()
+                else:
+                    messages.error(request, "Пока еще нет submission")
+
+            else:
+                print('teacher has not accepted yet')
+        else:
+            print("No valid assignment data found in FastAPI response.")
+
+    except Exception as e:
+        print(f"Error fetching assignment data: {e}")
+
+    context = {
+        'data': data,
+        'role': role,
+        'research_works': research_works, 
+        'semester': "Unknown", 
+        'user_id': user_id,
+        'teacher_id': teacher_id,
+        'teacher_first_name': teacher_first_name,
+        'teacher_last_name': teacher_last_name,
+        'teacher_middle_name': teacher_middle_name,
+        'submission_values': submission_values,
+        'assignment_data': assignment_data,
+        'assignment_subordinate': assignment_subordinate,
+        'is_accepted': is_accepted,
+        }
+    
+    return render(request, 'users/student_home.html', context)
+
+
+def student_create_assignment():
+    pass
 
 def research_work_detail(request, rw_id, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
@@ -300,30 +229,27 @@ def upload_file(request, subm_id, topic_id):
             form = UploadFileForm()
     return render(request, 'users/upload_file.html', context=context)
 
-def choose_teacher(request, student_id):
-    teachers = UserProfile.objects.filter(role='teacher')
-    student = get_object_or_404(UserProfile, pk=student_id, role='student')
-    
+def choose_teacher(request, student_id): # для полноценного функционала ручка не готова
+    teachers_response, _ = fastapi_request("user/all-teachers", method="POST", data=None)
+    # teachers = [user.get("user_id") for user in teachers_response.get("values") if user.get("role") == "teacher"] # здесь нужно поменять на список из словарей по данным учителей
+    teachers = [10]
     if request.method == 'POST':
         teacher_id = request.POST.get("teacher_id")
         message = request.POST.get("message")
-        if teacher_id and message:
-            teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
-            assignments = Assignment.objects.filter(teacher=teacher)
-            
-            if assignments.exists():
-                for assignment in assignments:
-                    if assignment.is_accepted or not assignment.is_reviewed:
-                        messages.error(request, 'The teacher is alredy chosen, you can\'t choose them twice')    
-                        return redirect('choose-teacher', student_id=student.id)
-            
-            Assignment.objects.create(student=student, teacher=teacher, text=message)
+        is_teacher_chosen, _ = fastapi_request("teacher/browse_assignments", method="GET", data={"teacher_id":teacher_id})
+        if is_teacher_chosen["values"].get("is_accepted") or is_teacher_chosen["values"].get("is_reviewed"):
+            messages.error(request, "The teacher is alredy chosen, you can\'t choose them twice or your request is on the review")
+            return redirect('choose-teacher', student_id=student_id)
         else:
-            messages.error(request, 'Something went wrong')
-            # print('It did not work')
+            if teacher_id and message:
+                data = {"student_id":student_id, "teacher_id":teacher_id, "text":message}
+                assignment, status_code = fastapi_request("student/create-assignment", method="POST", data=data, use_query_params=True)
+            else:
+                messages.error(request, 'You need to fill all the required spaces')
     
-    chosen_teachers = Assignment.objects.filter(student=student).order_by('-created_at')
-    context = {'teachers':teachers, 'student':student, 'chosen_teachers':chosen_teachers}
+    chosen_teachers, _ = fastapi_request("teacher/browse_assignments", method="GET", data={"teacher_id":student_id}) # здесь должен быть список всех учителей, которые были выбраны и отправлены запросы студентом
+    # teacher_id потом должен быть заменен на student_id
+    context = {'teachers':teachers, 'student':student_id, 'chosen_teachers':chosen_teachers}
     return render(request, 'users/choose_teacher.html', context=context)
 
     
@@ -437,44 +363,47 @@ def topics_files(request, sub_id, topic_id):
     else:
         messages.error(request, 'Invalid user') 
         return redirect('login')
-    
-@login_required
-def admin_home(request, admin_id):
-    if request.user.is_authenticated:
+
+
+def edit_profile(request, user_id):
+    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    response_data = response.get("data", {})
+    role = response_data.get("role", None)
+    data = {}
+
+    if request.method == 'POST':
+        data = {
+            "target": {
+                "user_id": user_id
+            },
+            "data": {
+                "email": request.POST.get("email"),
+                "first_name": request.POST.get("first_name"),
+                "last_name": request.POST.get("last_name"),
+                "middle_name": request.POST.get("middle_name"),
+                "group_id": request.POST.get("group_id", 0)
+            }
+        }
+
+        print(f"data from the form: {data}")
         
-        teachers = UserProfile.objects.filter(role='teacher')
-        students = UserProfile.objects.filter(role='student')
-        assignments = Assignment.objects.filter(is_accepted=True)
-        context = {'teachers':teachers, 'students':students, 'assignments':assignments}
-        return render(request, 'users/admin_home.html', context=context)
-    else:
-        messages.error(request, 'Invalid user') 
-        return redirect('login')
-    
-@login_required
-def admin_students_work(request, as_id):
-    if request.user.is_authenticated:
-        assignment = get_object_or_404(Assignment, pk=as_id)    
-        submissions = assignment.submission_set.all()
-        context = {'submissions':submissions, 'assignment':assignment}
-        return render(request, 'users/admin_students_work.html', context=context)
-    
-    else:
-        messages.error(request, 'Invalid user')
-        return redirect('login')
+        set_info_response, set_info_status_code = fastapi_request(f"user/set-info", method="PATCH", data=data, use_query_params=False)
 
+        if set_info_status_code == 201:
+            print(f"Данные пользователя успешно обновлены: {set_info_response}")
+            messages.success(request, "Данные пользователя успешно обновлены.")
+        else:
+            print(f"Ошибка изменения данных пользователя: {set_info_response}")
+            messages.error(request, f"Ошибка: {response.get('error', 'Неизвестная ошибка')}")
 
-def admin_submission_details(request, sub_id):
-    if request.user.is_authenticated:
-        submission = get_object_or_404(Submission, pk=sub_id)
-        topics = Topic.objects.filter(research_work=submission.research_work)
-        topic_files = {topic: File.objects.filter(topic=topic, submission=submission) for topic in topics}
-        context = {'submission':submission, 'topics':topics, 'topic_files':topic_files}
-        return render(request, 'users/admin_submission_details.html', context=context)
-    else:
-        messages.error(request, 'Invalid user')
-        return redirect('login')
-    
+    context = {
+        "data": response_data,
+        "role": role,
+        "user_id": user_id
+    }
+    return render(request, "users/edit_profile.html", context=context)
+  
+
 """
 class LoginResponse(Model):
     username: str
