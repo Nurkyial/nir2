@@ -28,7 +28,7 @@ def fastapi_request(endpoint, method="GET", data=None, token=None, use_query_par
             raise ValueError(f"Unsupported HTTP method: {method}")
 
         # Логируем полный ответ от FastAPI
-        print(f"FastAPI for API: {endpoint} Response [{response.status_code}]: {response.text}")
+        # print(f"FastAPI for API: {endpoint} Response [{response.status_code}]: {response.text}")
 
         response.raise_for_status()
         return response.json(), response.status_code

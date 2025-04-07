@@ -1,0 +1,68 @@
+{% extends "main.html" %}
+{% load static %}
+{% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr {
+    cursor: pointer;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+    <div class="container-lg">
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Создание работы для студента</strong>
+            </div>
+            <div class="card-body">
+                <div class="example">
+                    <form action="" method="POST">
+                        {% csrf_token %}
+                        <label for="studentSelect">Выберите студента</label>
+                        <select class="form-select" id="studentSelect" name="assignment_id">
+                            <option selected>Выберите студента</option>
+                            {% for student in students %}
+                            {% if student.last_accepted_assignment_subordinate %}
+                            <option value="{{student.last_accepted_assignment_subordinate.id}}">
+                              {{student.last_name}} {{student.first_name}} 
+                              {% if student.middle_name and student.middle_name != "string" %}
+                              {{ student.middle_name }}
+                              {% endif %}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                        <br />
+                        <label for="researchWorkSelect">Выберите работу</label>
+                        <select class="form-select" id="researchWorkSelect" name="researchwork_id">
+                            <option selected>Выберите работу</option>
+                            {% for rw_name, rw_id in research_works.items %}
+                            <option value="{{rw_id}}">
+                              {{rw_name}} 
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <br />
+                        <input class="form-control" type="text" name="submission_title" placeholder="Введети название задания">
+                        <input class="btn btn-secondary" type="submit" value="Создать"/>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div> 
+</div>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const clickableRows = document.querySelectorAll(".clickable-row");
+      clickableRows.forEach((row) => {
+        row.addEventListener("click", function () {
+          window.location.href = this.getAttribute("data-href");
+        });
+      });
+    });
+  </script>
+{% endblock content %}

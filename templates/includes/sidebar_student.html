@@ -23,7 +23,7 @@
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'choose-teacher' user_id=user_profile_pk%}"
+        href="{% url 'choose-teacher' user_id %}"
       >
         <svg class="nav-icon">
           <use
@@ -36,7 +36,7 @@
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'choose-teacher' user_id=user_profile_pk%}"
+        href="{% url 'student-assignments' user_id %}"
       >
         <svg class="nav-icon">
           <use
@@ -47,13 +47,15 @@
     </li>
 
     <li class="nav-group">
-      <a class="nav-link nav-group-toggle" href="#">
+      <a 
+        class="nav-link" 
+        href="#">
         <svg class="nav-icon">
           <use
             xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-puzzle"
           ></use>
         </svg>
-        Выбор работы</a
+        Мои работы</a
       >
       <ul class="nav-group-items">
         {% for submission in submissions %}

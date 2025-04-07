@@ -27,8 +27,12 @@ def loginPage(request):
 
         print("Отправляем в FastAPI:", data)
         response, status_code = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
-        user_id = response["data"].get("id")
-        print(f"FastAPI Response: {response} and status_code: {status_code}")
+        if status_code == 200:
+            user_id = response["data"].get("id")
+            print(f"FastAPI Response: {response} and status_code: {status_code}")
+        else:
+            print(f"Ошибка при логине: {response} status_code: {status_code}")
+            messages.error(request, f"Ошибка при логине: {response} status_code: {status_code}")
 
         user = authenticate(request, username=username, password=password)
         print(22, user)
@@ -37,11 +41,13 @@ def loginPage(request):
             login(request, user)
             return redirect_dashboard(user, user_id)
         else:
-            user = User.objects.create(username=username)
-            user.set_password(password)  
-            user.save()
-    
-        messages.error(request, "Неверные учетные данные")
+            # user = User.objects.create(username=username)
+            user, created = User.objects.get_or_create(username=username)
+            if created:
+                user.set_password(password)  
+                user.save()
+            login(request, user)
+            return redirect_dashboard(user, user_id)
  
     context = {"page":page}
     return render(request, 'users/login.html', context=context)
@@ -67,7 +73,7 @@ def redirect_dashboard(user, user_id):
         return redirect('student-home', user_id=user_id)
     elif user_role.lower() == 'teacher':
         print(6)
-        return redirect('teacher-home', teacher_id=user_id)
+        return redirect('teacher-home', user_id=user_id)
     else:
         messages.error('Unknown user')
         return redirect('login')
@@ -101,13 +107,17 @@ def student_home(request, user_id):
 
     research_works = []
     submission_values = []
-
+    assignment_data = {}
+    teacher_id = None
+    teacher_first_name = None
+    teacher_last_name = None
+    teacher_middle_name = None
     print(7)
     try:                        
         print(f"assignment from fastapi: {last_accepted_assignment}")
         
         if is_accepted:
-            # Получаем данные о преподавателе
+            # Получаем данные о преподавателе, если у студента есть научрук
             assignment_response, assignment_status_code = fastapi_request(f"assignment/{assignment_id}", method="GET", use_query_params=True)
             assignment_data = assignment_response.get("data", {})
             teacher = assignment_data.get("teacher", {})
@@ -153,9 +163,6 @@ def student_home(request, user_id):
     
     return render(request, 'users/student_home.html', context)
 
-
-def student_create_assignment():
-    pass
 
 def research_work_detail(request, rw_id, subm_id):
     research_work = get_object_or_404(ResearchWork, pk=rw_id)
@@ -229,68 +236,210 @@ def upload_file(request, subm_id, topic_id):
             form = UploadFileForm()
     return render(request, 'users/upload_file.html', context=context)
 
-def choose_teacher(request, student_id): # для полноценного функционала ручка не готова
-    teachers_response, _ = fastapi_request("user/all-teachers", method="POST", data=None)
-    # teachers = [user.get("user_id") for user in teachers_response.get("values") if user.get("role") == "teacher"] # здесь нужно поменять на список из словарей по данным учителей
-    teachers = [10]
+def choose_teacher(request, user_id): 
+    print(f'user_id = {user_id}')
+    user_info, status_code_info = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+
+    if status_code_info != 200:
+        messages.error(request, "Не удалось получить информацию о студенте")
+        return redirect('student-home', user_id=user_id)
+    
+    student_data = user_info.get("data", {})
+    print(f'student data: {student_data}')
+    assignment_subordinate = student_data.get("assignment_subordinate", [])
+    has_pending_assignment = any(not a["is_reviewed"] for a in assignment_subordinate)
+    role = student_data.get("role", None)
+    
+    create_assignment_data = {}
+  
     if request.method == 'POST':
         teacher_id = request.POST.get("teacher_id")
         message = request.POST.get("message")
-        is_teacher_chosen, _ = fastapi_request("teacher/browse_assignments", method="GET", data={"teacher_id":teacher_id})
-        if is_teacher_chosen["values"].get("is_accepted") or is_teacher_chosen["values"].get("is_reviewed"):
-            messages.error(request, "The teacher is alredy chosen, you can\'t choose them twice or your request is on the review")
-            return redirect('choose-teacher', student_id=student_id)
+
+        create_assignment_data = {
+            "student": {
+                "user_id": user_id
+            },
+            "teacher": {
+                "user_id": teacher_id
+            },
+            "text": message
+        }
+        create_assignmenent, status_code_asgn = fastapi_request("student/create-assignment", method="POST", data=create_assignment_data)
+        if create_assignmenent.get("msg") == "success" and status_code_asgn == 201:
+            return redirect('students-assignments', user_id=user_id)    
         else:
-            if teacher_id and message:
-                data = {"student_id":student_id, "teacher_id":teacher_id, "text":message}
-                assignment, status_code = fastapi_request("student/create-assignment", method="POST", data=data, use_query_params=True)
-            else:
-                messages.error(request, 'You need to fill all the required spaces')
+            messages.error(request, f"error creating assignment: {create_assignmenent}")
+            return redirect('choose-teacher', user_id=user_id)
     
-    chosen_teachers, _ = fastapi_request("teacher/browse_assignments", method="GET", data={"teacher_id":student_id}) # здесь должен быть список всех учителей, которые были выбраны и отправлены запросы студентом
-    # teacher_id потом должен быть заменен на student_id
-    context = {'teachers':teachers, 'student':student_id, 'chosen_teachers':chosen_teachers}
+    all_teachers, status_code_teachers = fastapi_request("user/all-teachers", method="GET", data=None)
+    teachers = []
+    if status_code_teachers == 200:
+        teachers = [
+            {"teacher_id": user.get("id"),
+            "last_name": user.get("last_name"),
+            "first_name": user.get("first_name"),
+            "middle_name": user.get("middle_name"),
+            "email": user.get("email")} for user in all_teachers.get("values")]
+    context = {'teachers':teachers, 'user_id':user_id, 'chosen_teacher': assignment_subordinate, 'has_pending_assignment': has_pending_assignment, 'role': role, 'data': student_data}
     return render(request, 'users/choose_teacher.html', context=context)
 
-    
+def assignment_statuses(request, user_id):
+    user_info, status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if status != 200:
+        messages.error(request, "Ошибка при получении заявок")
+        return redirect("student-home", user_id=user_id)
+    student_data = user_info.get("data", {})
+    role = student_data.get("role", None)
+    assignments = user_info.get("data", {}).get("assignment_subordinate", [])
+
+    for assignment in assignments:
+        teacher_id = assignment.get("teacher_id")
+        if teacher_id:
+            teacher_info, teacher_status = fastapi_request(f"user/{teacher_id}/info", method="GET", use_query_params=True)
+            if teacher_status == 200:
+                teacher_data = teacher_info.get("data", {})
+                assignment["teacher"] = {
+                    "first_name": teacher_data.get("first_name", ""),
+                    "last_name": teacher_data.get("last_name", ""),
+                    "middle_name": teacher_data.get("middle_name", "")
+                }
+    context = {"assignments": assignments, 'data': student_data, 'role': role, 'user_id': user_id}
+    return render(request, 'users/assignments_list.html', context=context)
+ 
+
+# ===============================================================================================================================
 # teacher page views
+
 @login_required
-def teacher_home(request, teacher_id):
-    if request.user.is_authenticated:
-        # teacher = get_object_or_404(UserProfile, pk=teacher_id, role='teacher')
-        teacher = get_object_or_404(UserProfile, user__id=teacher_id)
-        assignments = Assignment.objects.filter(teacher=teacher).exclude(is_reviewed=True, is_accepted=False)
-        context = {'teacher':teacher, 'assignments':assignments} 
+def teacher_home(request, user_id):
+    print("=== Teacher Home View Started ===")
+    print(f"teacher_id = {user_id}")
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
 
-
-        if request.method == 'POST':
-            action = request.POST.get('action')
-            assignment_id = request.POST.get('assignment_id')
-
-            
-            try:
-                assignment = Assignment.objects.get(pk=assignment_id, teacher=teacher)
-                if action == 'accept':
-                    assignment.is_accepted = True
-                    assignment.is_reviewed = True
-                    messages.success(request, 'Request accepted')
-                elif action == 'reject':
-                    assignment.is_accepted = False
-                    assignment.is_reviewed = True
-                    # assignment.delete()
-                    messages.success(request, 'Request rejected')
-                assignment.save()
-                    
-            except Assignment.DoesNotExist:
-                messages.error(request, "Assignment does not exist")
-            
-            return redirect('teacher-home', teacher_id=teacher_id)
-                    
-        return render(request, 'users/teacher_home.html', context=context)
-    else:
-        messages.error(request, 'Invalid user')
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподователе") 
         return redirect('login')
     
+    data = teacher_info.get("data", {})
+    assignments = data.get("assignment_supervisor", [])
+    student_requests_num = len([asgn for asgn in assignments if asgn["is_accepted"] is None])
+    active_assignments, active_assignments_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id": user_id}, use_query_params=True)
+    if active_assignments_status != 200:
+        messages.error(request, "Ошибка при получении списка студентов")
+        return redirect("teacher-home", user_id=user_id)
+    students = active_assignments.get("values", [])
+    role = teacher_info.get("data", {}).get("role", None)
+    context = {'role': role, 'user_id': user_id, 'student_requests_num': student_requests_num, 'students': students, 'data': data}
+    
+    return render(request, 'users/teacher_home.html', context=context)
+
+
+def review_assignment(request, user_id):
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподавателе")
+        return redirect('login')
+    
+    data = teacher_info.get("data", {})
+    role = data.get("role", None)   
+    assignments = data.get("assignment_supervisor", [])
+
+    # Добавляем инфу о студентах в заявки
+    for assignment in assignments:
+        student_id = assignment.get("student_id")
+        if student_id:
+            student_info, student_status = fastapi_request(f"user/{student_id}/info", method="GET", use_query_params=True)
+            if student_status == 200:
+                student_data = student_info.get("data", {})
+                assignment["student"] = {
+                    "first_name": student_data.get("first_name", ""),
+                    "last_name": student_data.get("last_name", ""),
+                    "middle_name": student_data.get("middle_name", ""),
+                    "group": student_data.get("group", "")
+                }
+
+    if request.method == 'POST':
+        print(9)
+        action = request.POST.get('action')
+        print(f'action = {action}')
+        assignment_id = request.POST.get('assignment_id')
+        print(f'assignment id from form = {assignment_id}')
+        try:
+            action_data = {
+                "teacher": {"user_id": user_id},
+                "assignment_id": assignment_id
+            }
+            if action == 'accept':
+                response, status = fastapi_request('teacher/accept-assignment', method='PATCH', data=action_data, use_query_params=False)
+                if status == 200:
+                    messages.info(request, "Assignment успешно создан")
+                else:
+                    messages.error(request, "Ошибка приянтия assignment")
+            elif action == 'decline':
+                response, status = fastapi_request('teacher/decline-assignment', method='PATCH', data=action_data, use_query_params=False)
+                if status == 200:
+                    messages.info(request, "Assignment успешно отклонен")
+                else:
+                    messages.error(request, "Ошибка отклонения assignment")
+            return redirect('review-assignment', user_id=user_id)
+        except:
+            messages.error(request, "Ошибка обработки assignment")
+            return redirect('review-assignment', user_id=user_id)
+    context = {'role': role, 'user_id': user_id, 'data': data, 'assignments': assignments}
+    return render(request, 'users/review_assignment.html', context=context)
+
+def create_submission(request, user_id):
+    research_works = {
+        'Диплом': 1,
+        'НИР': 2,
+        'Практика': 3
+    } # пока что так, когда появится ручка, нужно ее заменить
+
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподавателе")
+        return redirect('login')
+    data = teacher_info.get("data", {})
+    role = data.get("role", None)
+    list_students, list_students_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id":user_id}, use_query_params=True)
+    if list_students_status != 200:
+        messages.error(request, "Ошибка получения списка студентов")
+        return redirect('teacher-home', user_id)
+    students = list_students.get("values", [])
+
+    if request.method == 'POST':
+        assignment_id = request.POST.get('assignment_id')
+        researchwork_id = request.POST.get('researchwork_id')
+        submission_title = request.POST.get('submission_title')
+
+        try:
+            submission_data = {
+                'assignment_id': assignment_id,
+                'researchwork_id': researchwork_id,
+                'submission_title': submission_title
+            }
+            
+            response, status = fastapi_request(f'teacher/create-submission', method='POST', data=submission_data, use_query_params=True)
+
+            if status == 200:
+                    messages.info(request, "Submission успешно создан")
+            else:
+                messages.error(request, "Ошибка создания Submission")
+        except Exception as e:
+            print(f"Ошибка при создании submission: {e}")
+            messages.error(request, 'Ошибка обработки создания submission')
+            return redirect('teacher-home', user_id)
+        
+    context = {
+        'role': role,
+        'data': data,
+        'user_id': user_id,
+        'research_works': research_works,
+        'students': students
+    }
+    return render(request, 'users/create_submission.html', context=context)
+
 @login_required
 def student_work_detail(request, as_id):
     if request.user.is_authenticated:
@@ -369,6 +518,7 @@ def edit_profile(request, user_id):
     response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
     response_data = response.get("data", {})
     role = response_data.get("role", None)
+    print(f"edit profile started with role: {role} for user: {response.get("data").get("last_name")}")
     data = {}
 
     if request.method == 'POST':
@@ -401,23 +551,7 @@ def edit_profile(request, user_id):
         "role": role,
         "user_id": user_id
     }
+    print(f"context for edit profile: {context}")
     return render(request, "users/edit_profile.html", context=context)
   
 
-"""
-class LoginResponse(Model):
-    username: str
-    password: str
-    middle_name: str
-
-
-d = {
-    "username": "str",
-    "password": "str",
-    "middle_name": "str",
-}
-
-pd_obj = LoginResponse(**d)
-d['username']
-pd_obj.username
-"""

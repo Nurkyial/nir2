@@ -14,36 +14,39 @@
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'teacher-home' teacher_id=user_profile_pk %}"
-      >
+        href="{% url 'teacher-home' user_id %}">
         <svg class="nav-icon">
           <use
             xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-home"
-          ></use></svg
-        >Home</a
-      >
+          ></use></svg>Личная страница</a>
+    </li>
+    <li class="nav-group">
+      <a class="nav-link" href="{% url 'review-assignment' user_id %}">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user-follow"
+          ></use></svg>Список заявок</a>   
     </li>
     <li class="nav-group">
       <a class="nav-link nav-group-toggle" href="#">
         <svg class="nav-icon">
           <use
-            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-user"
-          ></use></svg
-        >Студенты</a
-      >
-      <ul class="nav-group-items">
-        {% for assignment in assignments %}
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            href="{% url 'student-work-detail' as_id=assignment.id %}"
-            ><span class="nav-icon"></span>{{assignment.student.user.last_name}}
-            {{assignment.student.user.first_name}}</a
-          >
-        </li>
-
-        {% endfor %}
-      </ul>
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-list"
+          ></use></svg>Работа студентов</a>   
+    </li>
+    <li class="nav-group">
+      <a class="nav-link" href="{% url 'create-submission' user_id %}">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-file"
+          ></use></svg>Создать работу</a>   
+    </li>
+    <li class="nav-group">
+      <a class="nav-link nav-group-toggle" href="#">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-mobile"
+          ></use></svg>Мобильное <br> приложение</a>   
     </li>
   </ul>
   <button
