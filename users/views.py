@@ -389,11 +389,13 @@ def review_assignment(request, user_id):
     context = {'role': role, 'user_id': user_id, 'data': data, 'assignments': assignments}
     return render(request, 'users/review_assignment.html', context=context)
 
-def create_submission(request, user_id):
+def create_submission(request, user_id): # функция которая создает работу для студетов
     research_works = {
         'Диплом': 1,
         'НИР': 2,
-        'Практика': 3
+        'УИР': 3,
+        'Зимняя практика': 4,
+        'Летняя практика': 5
     } # пока что так, когда появится ручка, нужно ее заменить
 
     teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
@@ -439,6 +441,109 @@ def create_submission(request, user_id):
         'students': students
     }
     return render(request, 'users/create_submission.html', context=context)
+
+def review_submissions(request, user_id):
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподавателе")
+        return redirect('login')
+    data = teacher_info.get("data", {})
+    role = data.get("role", None)
+    list_students, list_students_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id":user_id}, use_query_params=True)
+    if list_students_status != 200:
+        messages.error(request, "Ошибка получения списка студентов")
+        return redirect('teacher-home', user_id)
+    students = list_students.get("values", [])
+    context = {
+        'role': role,
+        'data': data,
+        'user_id': user_id,
+        'students': students
+    }
+    return render(request, 'users/review_submissions.html', context=context)
+
+def review_student_submission(request, user_id, student_id, assignment_id):
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподавателе")
+        return redirect('login')
+    data = teacher_info.get("data", {})
+    role = data.get("role", None)
+    submissions, submission_status = fastapi_request(f"assignment/{assignment_id}/submissions")
+    if submission_status != 200:
+        messages.error(request, "Ошибка получения информации о работах студента")
+        return redirect('review-submissions', user_id)
+    submissions_values = submissions.get("values", [])
+    context = {
+        'role': role,
+        'data': data,
+        'user_id': user_id,
+        'submissions_values': submissions_values,
+        'student_id': student_id
+    }
+    return render(request, 'users/review_student_submission.html', context=context)
+
+def review_topics(request, user_id, submission_id):
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if teacher_status != 200:
+        messages.error(request, "Ошибка получения информации о преподавателе")
+        return redirect('login')
+    data = teacher_info.get("data", {})
+    role = data.get("role", None)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        submission_topic_id = request.POST.get('submission_topic_id')
+        comment = request.POST.get('comment')
+
+        payload = {
+            "submission_topic_id": int(submission_topic_id),
+            "comment": comment
+        }
+
+        if action == 'accept':
+            url = 'teacher/accept-submission-topic'
+        elif action == 'reject':
+            url = 'teacher/decline-submission-topic'
+        else:
+            url = 'teacher/review-submission-topic'
+            payload = payload = {
+            "submission_topic_id": int(submission_topic_id)
+            }
+        
+        try:
+            response, status = fastapi_request(url, method="PATCH", data=payload, use_query_params=False)
+            if status == 200:
+                messages.success(request, f"Тема {'принята' if action == 'accept' else 'отклонена'} успешно.")
+            else:
+                messages.error(request, f"Ошибка при {'принятии' if action == 'accept' else 'отклонении'} темы.")
+        except Exception as e:
+            messages.error(request, f"Ошибка отправки данные: {str(e)}")
+        
+        return redirect('review-topics', user_id=user_id, submission_id=submission_id)
+
+    topics_data, status = fastapi_request(f"submission/{submission_id}/topics", method="GET", use_query_params=True)
+    topics = topics_data.get("values", [])
+    if status != 200:
+        messages.error(request, "Ошибка получения информации о топиках работы")
+        return redirect('review-student-submission', user_id)
+    submission, submission_status = fastapi_request(f"submission/{submission_id}")
+    if submission_status != 200:
+        messages.error(request, "Ошибка получения информации о работах студента")
+        return redirect('review-submissions', user_id)
+
+    submission_data = submission.get("data", {})
+    context = {
+        'role': role,
+        'data': data,
+        'user_id': user_id,
+        'topics': topics,
+        'submission_data': submission_data
+    }
+    return render(request, 'users/review_topics.html', context=context)
+
+def review_submission_topic(request, topicz_id):
+    pass
 
 @login_required
 def student_work_detail(request, as_id):

@@ -19,7 +19,10 @@ urlpatterns = [
     path('edit-profile/<int:user_id>/', views.edit_profile, name='edit-profile'),
     path('student/<int:user_id>/assignments/', views.assignment_statuses, name="student-assignments"),
     path('review-assignment/<int:user_id>/', views.review_assignment, name='review-assignment'),
-    path('create-submission/<int:user_id>/', views.create_submission, name='create-submission')
+    path('create-submission/<int:user_id>/', views.create_submission, name='create-submission'),
+    path('review-submissions/<int:user_id>/', views.review_submissions, name='review-submissions'),
+    path('review-student-submission/<int:user_id>/<int:student_id>/<int:assignment_id>/', views.review_student_submission, name='review-student-submission'),
+    path('review-topics/<int:user_id>/<int:submission_id>', views.review_topics, name='review-topics')
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

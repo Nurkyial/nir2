@@ -1,0 +1,69 @@
+{% extends "main.html" %}
+{% load static %}
+{% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr {
+    cursor: pointer;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+    <div class="container-lg">
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>Работы студентов</strong>
+        </div>
+        <div class="card-body">
+          <div class="example">
+            <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 20%" scope="col">Тип работы</th>
+                    <th style="width: 20%" scope="col">Тема работы</th>
+                    <th style="width: 20%" scope="col">Семестр</th>
+                    <th style="width: 20%" scope="col"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% if submissions_values %}
+                {% for submission in submissions_values %}
+                <tr class="clickable-row"
+                    data-href="{% url 'review-topics' user_id submission.id %}">
+                    <td>{{ submission.research_work.name }}</td>
+                    <td>{{ submission.submission_title }}</td>
+                    <td>{{ submission.semester }}</td>
+                    <td class="text-end">
+                      <button class="btn btn-danger btn-sm">Удалить</button>
+                    </td>
+                </tr>{% endfor %}
+                {% else %}
+                <td>Вы пока не создали работу для студента</td>
+                {% endif %}
+                </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const clickableRows = document.querySelectorAll(".clickable-row");
+      clickableRows.forEach((row) => {
+        row.addEventListener("click", function () {
+          const url = this.getAttribute("data-href");
+          if (url) {
+            window.location.href = url;
+          }
+        });
+      });
+    });
+  </script>
+  
+{% endblock content %}
