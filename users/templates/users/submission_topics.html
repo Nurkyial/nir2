@@ -2,41 +2,123 @@
 <style>
   .clickable-card {
     cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
-  tr {
-    cursor: pointer;
+
+  .card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-content {
+    flex-grow: 1;
+  }
+
+  .card-footer {
+    margin-top: 10px;
+  }
+
+  .card-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+
+  .textarea-comment {
+    resize: none;
   }
 </style>
+
 {% endblock %} {% block content %}
 <div class="body flex-grow-1 px-3">
   <div class="container-lg">
     <div class="card mb-4">
       <div class="card-header">
-        <strong>{{submission.research_work.name}}</strong>
+        <strong>{{submission_data.submission_title}}</strong>
       </div>
       <div class="card-body">
         <div class="example">
-          <div
-            class="tab-pane p-3 active preview"
-            role="tabpanel"
-            id="preview-946"
-          >
-            <div class="row">
-              {% for topic in topics %}
-              <div class="col-xl-4">
-                <div
-                  class="card text-white bg-info mb-3 clickable-card"
-                  data-href="{% url 'topics-files' sub_id=submission.id topic_id=topic.id%}"
-                >
-                  <div class="card-header">
-                    {{submission.research_work.name}}
-                  </div>
-                  <div class="card-body">
-                    <h5 class="card-title">{{topic.name}}</h5>
+          <div class="tab-content rounded-bottom">
+            <div
+              class="tab-pane p-3 active preview"
+              role="tabpanel"
+              id="preview-946"
+            >
+              <div class="row">
+                {% for topic_value in topics %}
+                <div class="col-xl-4 mb-4">
+                  <div class="card text-white bg-info clickable-card">
+                    <div class="card-header">{{submission_data.research_work.name}}</div>
+                    <div class="card-body d-flex flex-column">
+                      <h5 class="card-title">{{topic_value.topic.name}}</h5>
+
+                      {% if topic_value.files and topic_value.files|length > 0 %}
+                      {% with last_file=topic_value.files|first %}
+                      <div class="d-flex justify-content-between align-items-center">
+                        <a 
+                        href="{% url 'download-file' file_id=last_file.id %}" 
+                        class="text-white fw-bold d-block text-decoration-underline" 
+                        download="{{ last_file.original_filename }}"
+                        >
+                          {{ last_file.original_filename }}
+                        </a>
+
+                        {% if topic_value.is_accepted is not True and topic_value.is_accepted is not False %}
+                      <a 
+                        href="{% url 'delete-file' user_id=user_id file_id=last_file.id %}?submission_id={{submission_data.id}}" 
+                        class="btn btn-sm btn-danger ms-2 d-flex align-items-center justify-content-center" 
+                        style="width: 32px; height: 32px;"
+                        title="Удалить файл"
+                        >
+                        <svg class="nav-icon">
+                          <use
+                            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-trash"
+                          ></use>
+                        </svg>
+                      </a>
+                        {% endif %}
+                      </div>
+                      {% endwith %}
+                      {% if topic_value.is_accepted is True %}
+                      <p class="mt-2 text-success fw-bold">Принято</p>
+                      {% if topic_value.comments and topic_value.comments|length > 0 %}
+                        {% with last_comment=topic_value.comments|last %}
+                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        {% endwith %}
+                      {% endif %}
+                      {% elif topic_value.is_accepted is False %}
+                      <p class="mt-2 text-danger fw-bold">Отклонено</p>
+                      {% if topic_value.comments and topic_value.comments|length > 0 %}
+                        {% with last_comment=topic_value.comments|last %}
+                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        {% endwith %}
+                      {% endif %}
+                      {% else %}
+                      <p class="mt-2 text-warning fw-bold">На рассмотрении</p>
+                      {% endif %}
+                      
+                      {% else %}
+                      <p class="text-white text-center">Файл не загружен</p>
+                      {% endif %}
+                      <!-- Статус -->
+                      
+                      <div class="card-footer">
+                      <form method="POST" enctype="multipart/form-data" action="">
+                        {% csrf_token %}
+                        <input type="file" name="file" class="form-control mb-2" required>
+                        <input type="hidden" name="submission_topic_id" value="{{ topic_value.id }}">
+                        <button type="submit" class="btn btn-light btn-sm w-100">Загрузить</button>
+                      </form>
+                    </div>
+                    </div>
                   </div>
                 </div>
+                {% endfor %}
               </div>
-              {% endfor %}
             </div>
           </div>
         </div>
@@ -44,16 +126,4 @@
     </div>
   </div>
 </div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const clickableCards = document.querySelectorAll(".clickable-card");
-    clickableCards.forEach((card) => {
-      card.addEventListener("click", function () {
-        window.location.href = this.getAttribute("data-href");
-      });
-    });
-  });
-</script>
-
 {% endblock content %}

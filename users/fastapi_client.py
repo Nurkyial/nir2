@@ -3,21 +3,28 @@ from django.conf import settings
 
 FASTAPI_URL = settings.FASTAPI_BASE_URL
 
-def fastapi_request(endpoint, method="GET", data=None, token=None, use_query_params=False):
+def fastapi_request(endpoint, method="GET", data=None, token=None, files=None, use_query_params=False):
     url = f"{FASTAPI_URL}/{endpoint}"
     
-    headers = {"Content-Type": "application/json"}
+    headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}" if token else ""
+    if not files:
+        headers["Content-Type"] = "application/json"
         
     params = data if use_query_params else None
-    json_data = None if use_query_params else data
+    json_data = None if use_query_params or files else data
  
     try:
         if method == 'GET':
             response = requests.get(url, headers=headers, json=json_data, params=params)
         elif method == 'POST':
-            response = requests.post(url, headers=headers, json=json_data, params=params)
+            if files:
+                print('f')
+                response = requests.post(url, headers=headers, params=params, files=files)
+            else:
+                print('e')
+                response = requests.post(url, headers=headers, json=json_data, params=params)
         elif method == 'PUT':
             response = requests.put(url, headers=headers, json=json_data, params=params)
         elif method == 'DELETE':

@@ -92,7 +92,7 @@
                   >
                   {% else %}
                   <a
-                    href="{% url 'choose-teacher' student_id %}"
+                    href="{% url 'choose-teacher' user_id %}"
                     class="btn btn-danger"
                   >
                     Выбрать</a
@@ -127,12 +127,15 @@
               {% for submission in submission_values %} 
               <tr
                 class="clickable-row"
-                data-href="{% url 'research-work-detail' rw_id=submission.research_work.id subm_id=submission.id %}"
+                data-href="{% url 'submission-topics' user_id=user_id submission_id=submission.id %}"
               >
                 <td>{{ submission.research_work.name }}</td>
                 <td>{{ submission.semester }}</td>
                 <td>
-                  {{submission.assignment.teacher_id}} <!-- Здесь должно быть фио учителя -->
+                  {{ teacher_last_name }} {{teacher_first_name}}
+                  {% if teacher_middle_name and teacher_middle_name != "string" %}
+                  {{ teacher_middle_name }}
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}

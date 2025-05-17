@@ -11,8 +11,14 @@ from django.core.files.storage import FileSystemStorage
 from .form import UploadFileForm, UserCreationForm
 from datetime import date
 from .utils import SemesterUtils
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse, StreamingHttpResponse
 from .fastapi_client import fastapi_request
+import requests
+from django.utils.encoding import smart_str
+from urllib.parse import quote
+from django.conf import settings
+
+FASTAPI_URL = settings.FASTAPI_BASE_URL
 
 def loginPage(request):
     page = 'login'
@@ -26,9 +32,10 @@ def loginPage(request):
         data = {"username": username, "password": password}
 
         print("Отправляем в FastAPI:", data)
-        response, status_code = fastapi_request('auth/login', method='POST', data=data, use_query_params=True)
+        response, status_code = fastapi_request('auth/login', method='POST', data=data, use_query_params=False)
         if status_code == 200:
             user_id = response["data"].get("id")
+            print(f'user_id = {user_id}')
             print(f"FastAPI Response: {response} and status_code: {status_code}")
         else:
             print(f"Ошибка при логине: {response} status_code: {status_code}")
@@ -52,6 +59,16 @@ def loginPage(request):
     context = {"page":page}
     return render(request, 'users/login.html', context=context)
 
+
+def redirect_dashboard(user, user_id):
+    response = redirect_dashboard(user, user_id)
+
+    response.set_cookie("user_session_jwt", get_jwt())
+
+    return response
+
+def get_jwt():
+    return ""
 
 def redirect_dashboard(user, user_id):
     print(f"username в джанго: {user.username}")
@@ -115,7 +132,7 @@ def student_home(request, user_id):
     print(7)
     try:                        
         print(f"assignment from fastapi: {last_accepted_assignment}")
-        
+
         if is_accepted:
             # Получаем данные о преподавателе, если у студента есть научрук
             assignment_response, assignment_status_code = fastapi_request(f"assignment/{assignment_id}", method="GET", use_query_params=True)
@@ -161,6 +178,7 @@ def student_home(request, user_id):
         'is_accepted': is_accepted,
         }
     
+    print(8)
     return render(request, 'users/student_home.html', context)
 
 
@@ -204,38 +222,124 @@ def upload_page(request, rw_id, topic_id, subm_id):
     context = {'research_work':research_work, 'topic':topic, 'submission':submission, 'form': form, 'file_list': file_list}
     return render(request, 'users/upload_file.html', context)
 
+def submission_topics(request, user_id, submission_id):
+    student_info, student_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    if student_status != 200:
+        messages.error(request, "Ошибка получения информации о студенте")
+        return redirect('login')
+    data = student_info.get("data", {})
+    role = data.get("role", None)
 
-def upload_file(request, subm_id, topic_id):
-    submission = get_object_or_404(Submission, pk=subm_id)
-    topic = get_object_or_404(Topic, pk=topic_id)
-
-    try:
-        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
-    except Http404:
-        print(f"TopicSubmission with topic_id={topic_id} and submission_id={subm_id} not found.")
-        raise
-
-    form = UploadFileForm()
-    file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
-    context = {'submission':submission, 'topic':topic, 'form': form, 'file_list':file_list}
-    
     if request.method == 'POST':
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid(): 
-            file_instance = form.save(commit=False)
-            file_instance.topic_submission = topic_submission
-            # file_instance.submission = submission
-            file_instance.save()
-            file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
-            context.update({'file_list':file_list})
-            messages.success(request, 'File succesfully uploaded')
-            # return render(request, 'users/upload_file.html', context=context)
-            return redirect('upload-file', subm_id=submission.id, topic_id=topic.id)
-        else:
-            messages.error(request, 'No file was uploaded')
-            form = UploadFileForm()
-    return render(request, 'users/upload_file.html', context=context)
+        print("224")
+        file = request.FILES.get('file')
+        submission_topic_id = request.POST.get('submission_topic_id')
+        print(file, submission_topic_id)
 
+        if not file or not submission_topic_id:
+            print("229")
+            print('Файл или submission_topic_id не переданы')
+            return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+        
+        try:
+            print("234")
+            files = {'file': (file.name, file.read(), file.content_type)}
+            # files = {'file': file}
+            params = {'submission_topic_id': submission_topic_id}
+            response, status_code = fastapi_request('user/upload', method='POST', data=params, files=files, use_query_params=True)
+            # url = f"{FASTAPI_URL}/student/upload"
+
+            # response = requests.post(url, params=params, files=files)
+
+            if status_code == 200:
+                print("Файл успешно загружен")
+            else:
+                print(f'Ошибка загрузки файла: {response}')
+                
+            print("246", response)
+        except Exception as e:
+            print(f'Ошибка загрузки: {str(e)}')
+
+        print("249")
+        return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+
+    topics_data, status = fastapi_request(f"submission/{submission_id}/topics", method="GET", use_query_params=True)
+    topics = topics_data.get("values", [])
+    if status != 200:
+        messages.error(request, "Ошибка получения информации о топиках работы")
+        return  redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+    submission, submission_status = fastapi_request(f"submission/{submission_id}")
+    if submission_status != 200:
+        messages.error(request, "Ошибка получения информации о работах студента")
+        return  redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+
+    submission_data = submission.get("data", {})
+    context = {
+        'role': role,
+        'data': data,
+        'user_id': user_id,
+        'topics': topics,
+        'submission_data': submission_data,
+        'submission_id': submission_id
+    }
+
+    return render(request, 'users/submission_topics.html', context=context)
+
+def download_file(request, file_id):
+    print(f'file_id = {file_id}')
+    try:
+        # url = f"http://89.150.34.163:8000/api/v1/student/download/{file_id}"
+        # response = requests.get(url)
+        response, status_code = fastapi_request(f'user/download/{file_id}', method='GET', data={'file_id': file_id})
+        if status_code != 200:
+            raise Http404("Файл не найден")
+
+        json_data = response
+        print(f'json_data: {json_data}')
+        download_url = json_data.get("download_url")    
+        original_filename = json_data.get("original_filename", f"file_{file_id}")
+        print(f'filename: {original_filename}')
+
+        if not download_url:
+            raise Http404("Ссылка на скачивание отсутствует")
+
+        file_response = requests.get(download_url, stream=True)
+        if file_response.status_code != 200:
+            raise Http404("Ошибка при скачивании файла")
+        
+        content_type = file_response.headers.get("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        filename_ascii = smart_str(original_filename)
+        filename_utf8 = quote(original_filename)
+
+        response = StreamingHttpResponse(
+            streaming_content=file_response.iter_content(chunk_size=8192),
+            content_type=content_type
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{filename_ascii}"; '
+            f"filename*=UTF-8''{filename_utf8}"
+        )
+
+        return response
+
+    except Exception as e:
+        print(f"Ошибка при скачивании: {e}")
+        raise Http404("Ошибка при скачивании файла")
+
+def delete_file(request, user_id, file_id):
+    submission_id = request.GET.get('submission_id')
+    try:
+        response, status_code = fastapi_request('user/remove-file', 'DELETE', data = {'file_id': file_id}, use_query_params=True)
+        print(f"response from deleting file: {response} and status code: {status_code}")
+        if status_code == 200:
+            print(f"Файл с id = {file_id} успешно удален")
+        else:
+            print(f"Ошибка при удалении файла")
+    except Exception as e:
+        print(f"Ошибка при удалении файла")
+
+    return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+        
 def choose_teacher(request, user_id): 
     print(f'user_id = {user_id}')
     user_info, status_code_info = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
@@ -267,7 +371,7 @@ def choose_teacher(request, user_id):
         }
         create_assignmenent, status_code_asgn = fastapi_request("student/create-assignment", method="POST", data=create_assignment_data)
         if create_assignmenent.get("msg") == "success" and status_code_asgn == 201:
-            return redirect('students-assignments', user_id=user_id)    
+            return redirect('student-assignments', user_id=user_id)    
         else:
             messages.error(request, f"error creating assignment: {create_assignmenent}")
             return redirect('choose-teacher', user_id=user_id)
@@ -311,7 +415,6 @@ def assignment_statuses(request, user_id):
 # ===============================================================================================================================
 # teacher page views
 
-@login_required
 def teacher_home(request, user_id):
     print("=== Teacher Home View Started ===")
     print(f"teacher_id = {user_id}")
@@ -391,7 +494,7 @@ def review_assignment(request, user_id):
 
 def create_submission(request, user_id): # функция которая создает работу для студетов
     research_works = {
-        'Диплом': 1,
+        'ВКР': 1,
         'НИР': 2,
         'УИР': 3,
         'Зимняя практика': 4,
@@ -563,24 +666,6 @@ def student_work_detail(request, as_id):
         return redirect('login')
     
 @login_required
-def submission_topics(request, sub_id):
-    if request.user.is_authenticated:
-        submission = get_object_or_404(Submission, pk=sub_id)
-        
-        if submission.assignment.teacher != request.user.userprofile:
-            messages.error(request, "You do not have permission to view this page.")
-            return redirect('teacher-home', teacher_id=request.user.userprofile.pk)
-        
-        topics = Topic.objects.filter(research_work=submission.research_work)
-        context = {'submission':submission, 'topics':topics}
-        
-        return render(request, 'users/submission_topics.html', context=context)
-    
-    else:
-        messages.error(request, 'Invalid user')
-        return redirect('login')
-    
-@login_required
 def topics_files(request, sub_id, topic_id):
     if request.user.is_authenticated:
         submission = get_object_or_404(Submission, pk=sub_id)
@@ -622,7 +707,7 @@ def topics_files(request, sub_id, topic_id):
 def edit_profile(request, user_id):
     response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
     response_data = response.get("data", {})
-    role = response_data.get("role", None)
+    role = response_data.get("role", None)  
     print(f"edit profile started with role: {role} for user: {response.get("data").get("last_name")}")
     data = {}
 

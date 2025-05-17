@@ -58,9 +58,13 @@
 
                       {% if topic_value.files and topic_value.files|length > 0 %}
                       {% with last_file=topic_value.files|last %}
-                        <a href="http://89.150.34.163:8000/api/v1/student/download/{{ last_file.id }}" class="btn btn-light my-2" target="_blank">
-                          Скачать файл
-                        </a>
+                      <a 
+                      href="{% url 'download-file' file_id=last_file.id %}" 
+                      class="text-white fw-bold d-block text-decoration-underline" 
+                      download="{{ last_file.original_filename }}"
+                      >
+                        {{ last_file.original_filename }}
+                      </a>
                       {% endwith %}
                       {% else %}
                       <p class="text-white text-center">Файл отсутствует</p>
