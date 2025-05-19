@@ -1,0 +1,83 @@
+{% extends "main.html" %}
+{% load static %}
+{% block head %}
+{% endblock %} {% block content %}
+<div class="body flex-grow-1 px-3">
+    <div class="container-lg">
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Статистика по работам всех студентов</strong>
+            </div>       
+            <div class="card-body">
+                <form method="GET" class="mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <select name="field" class="form-control">
+                                <option value="student" {% if request.GET.field == "student" %}selected{% endif %}>ФИО студента</option>
+                                <option value="teacher" {% if request.GET.field == "teacher" %}selected{% endif %}>ФИО руководителя</option>
+                                <option value="group" {% if request.GET.field == "group" %}selected{% endif %}>Группа</option>
+                                <option value="research" {% if request.GET.field == "research" %}selected{% endif %}>Тип работы</option>
+                                <option value="semester" {% if request.GET.field == "semester" %}selected{% endif %}>Семестр</option>
+                            </select>
+                        </div>
+
+                        <!--Поле ввод-->
+                        <div class="col-md-6">
+                            <input type="text" name="query" class="form-control" placeholder="Введите значение"
+                                value="{{ request.GET.query }}">
+                        </div>
+
+                        <!--Кнопка поиска-->
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">Поиск</button>
+                        </div>
+                    </div>
+                </form>
+                {% for info in statistics %}
+                <table class="table table-info">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">ФИО студента</th>
+                            <th style="width: 120px;">ФИО руководителя</th>
+                            <th style="width: 90px;">Группа</th>
+                            <th style="width: 80px;">Работа</th>
+                            <th style="width: 120px;">Тема работы</th>
+                            <th style="width: 60px;">Семестр</th>
+                            {% for topic in info.topics_values %}
+                                <th style="width: 100px;"> {{topic.name}} </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td> {{info.student_full_name}} </td>
+                            <td> {{info.teacher_full_name}} </td>
+                            <td> {{info.student_group_name}} </td>
+                            <td> {{info.researchwork_name}} </td>
+                            <td> {{info.submission_title}} </td>
+                            <td> {{info.semester}} </td>
+                            {% for topic in info.topics_values %}
+                            <td>
+                                {% if topic.status == "Принято" %}
+                                ✅
+                                {% elif topic.status == "Отклонено" %}
+                                ❌
+                                {% else %}
+                                ⏳
+                                {% endif %}
+                            </td>   
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+                {% endfor %}
+                <div class="d-flex justify-content-end mt-3">
+                    <a href="{% url "export-statistics-excel" user_id %}?field={{request.GET.field}}&query={{request.GET.query}}" class="btn btn-secondary mt-3">
+                        Экспортировать в эксель
+                    </a>
+                </div>               
+            </div>  
+        </div>
+    </div>
+</div>
+{% endblock content %}

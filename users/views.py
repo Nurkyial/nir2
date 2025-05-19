@@ -17,6 +17,10 @@ import requests
 from django.utils.encoding import smart_str
 from urllib.parse import quote
 from django.conf import settings
+from django.core.cache import cache
+import pandas as pd
+from urllib.parse import quote
+
 
 FASTAPI_URL = settings.FASTAPI_BASE_URL
 
@@ -648,61 +652,6 @@ def review_topics(request, user_id, submission_id):
 def review_submission_topic(request, topicz_id):
     pass
 
-@login_required
-def student_work_detail(request, as_id):
-    if request.user.is_authenticated:
-        assignment = get_object_or_404(Assignment, pk=as_id)
-        
-        if assignment.teacher != request.user.userprofile:
-            messages.error(request, 'You do not have permission to view this page.')
-            return redirect('teacher-home', teacher_id=request.user.userprofile.pk)
-        
-        submissions = assignment.submission_set.all()
-        context = {'submissions':submissions, 'assignment':assignment}
-        return render(request, 'users/students_work.html', context=context)
-    
-    else:
-        messages.error(request, 'Invalid user')
-        return redirect('login')
-    
-@login_required
-def topics_files(request, sub_id, topic_id):
-    if request.user.is_authenticated:
-        submission = get_object_or_404(Submission, pk=sub_id)
-        topic = get_object_or_404(Topic, pk=topic_id)
-        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
-        files = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
-        # last_uploaded_file = files.first() if files.exists() else None
-        last_uploaded_file = files.filter(is_reviewed=False).first()
-        if request.method == 'POST':
-            file_id = request.POST.get('file_id')
-            action = request.POST.get('action')
-            comment_text = request.POST.get('comment')
-            file_object = get_object_or_404(File, pk=file_id)
-            if action == 'Принять':
-                file_object.is_accepted = True
-                file_object.is_reviewed = True
-                file_object.comment = ''
-                messages.success(request, 'File accepted')
-            elif action == 'Отклонить':
-                file_object.is_accepted = False
-                file_object.is_reviewed = True
-                file_object.comment = comment_text
-                messages.success(request, 'File rejected.')
-            
-            file_object.save()
-
-            files = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
-            last_uploaded_file = files.filter(is_reviewed=False).first()
-            return redirect('topics-files', sub_id=sub_id, topic_id=topic_id)
-            
-            
-        context = {'topic':topic, 'files':files, 'last_uploaded_file':last_uploaded_file}
-        return render(request, 'users/topics_files.html', context=context)
-    else:
-        messages.error(request, 'Invalid user') 
-        return redirect('login')
-
 
 def edit_profile(request, user_id):
     response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
@@ -721,7 +670,8 @@ def edit_profile(request, user_id):
                 "first_name": request.POST.get("first_name"),
                 "last_name": request.POST.get("last_name"),
                 "middle_name": request.POST.get("middle_name"),
-                "group_id": request.POST.get("group_id", 0)
+                "group_id": request.POST.get("group_id", 0),
+                "about_me": request.POST.get("about_me")
             }
         }
 
@@ -744,4 +694,185 @@ def edit_profile(request, user_id):
     print(f"context for edit profile: {context}")
     return render(request, "users/edit_profile.html", context=context)
   
+
+def show_statistics(request, user_id):
+
+    students_without_teacher = []
+    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    response_data = teacher_info.get("data", {})
+    role = teacher_info.get("data").get("role", None) 
+    print(f"user_id in statistics = {user_id} and role = {role}")
+    research_works = {
+        1: 'ВКР',
+        2: 'НИР',
+        3: 'УИР',
+        4: 'Зимняя практика',
+        5: 'Летняя практика'
+    } # пока что так, когда появится ручка, нужно ее заменить
+
+    
+    all_students = cache.get("all_students")
+    if not all_students:
+        response, status_code = fastapi_request('user/all-students', method='GET')
+        all_students = response.get('values', [])
+        cache.set("all_students", all_students, 60*30)
+    # student_name, teacher_name, group, research_work, name_of_work, semester, topics (arrows), teacher_comment
+    data = cache.get(f"statistics_user_{user_id}")
+    if not data:
+        data = []
+        
+
+        for student in all_students:
+            student_first_name = student.get("first_name", "")
+            student_last_name = student.get("last_name", "")
+            student_middle_name = student.get("middle_name", "")
+            if student.get("group") is None:
+                student_group_name = "Группа не указана"
+            else:
+                student_group_name = student.get("group").get("group_name", "")
+            assignment_subordinate = student.get("last_accepted_assignment_subordinate")
+            if not assignment_subordinate:
+                students_without_teacher.append({
+                    "student_full_name": f"{student_last_name} {student_first_name} {student_middle_name}"
+                })
+                continue # если у студента нет препода, то пропускаем
+
+            assignment_id = student.get("last_accepted_assignment_subordinate").get("id")
+            assignment_cache_key = f"assignment_{assignment_id}"
+            assignment_info = cache.get(assignment_cache_key)
+            if not assignment_info:
+                assignment_info, assignment_status = fastapi_request(f'assignment/{assignment_id}', method='GET', use_query_params=True)
+                cache.set(assignment_cache_key, assignment_info, 60*30)
+
+            teacher_first_name = assignment_info.get("data", {}).get("teacher").get("first_name", "")
+            teacher_last_name = assignment_info.get("data", {}).get("teacher").get("last_name", "")
+            teacher_middle_name = assignment_info.get("data", {}).get("teacher").get("middle_name", "")
+            
+            for submission in assignment_info.get("data", {}).get("submissions"):
+                submission_id = submission.get("id")
+                submission_title =  submission.get("submission_title")
+                researchwork_id = submission.get("researchwork_id")
+                semester = submission.get("semester")
+
+                topics_cache_key = f"submission_topics_{submission_id}"
+                topics = cache.get(topics_cache_key)
+                if not topics:
+                    topics, topics_status = fastapi_request(f'submission/{submission_id}/topics')
+                    cache.set(topics_cache_key, topics, 60*30)
+                topics_values = topics.get("values", [])
+                
+                topic_data_list = []
+                for topic in topics_values:
+                    topic_name = topic.get("topic").get("name")
+                    topic_status = topic.get("is_accepted")
+                    status_readable = (
+                        "Принято" if topic_status is True else
+                        "Отклонено" if topic_status is False else
+                        "На рассмотрении"
+                    )
+                    comments = topic.get("comments", [])
+                    last_comment = comments[-1]["comment"] if comments else ""
+
+                    topic_data_list.append({
+                        "name": topic_name,
+                        "status": status_readable,
+                        "comment": last_comment
+                    })
+                
+                data.append({
+                    "student_full_name": f"{student_last_name} {student_first_name} {student_middle_name}", 
+                    "teacher_full_name": f"{teacher_last_name} {teacher_first_name} {teacher_middle_name}",
+                    "student_group_name": student_group_name,
+                    "researchwork_name": research_works.get(researchwork_id, "Нет типа работы"),
+                    "submission_title": submission_title,
+                    "semester": semester,
+                    "topics_values": topic_data_list
+                })
+        cache.set(f'statistics_user_{user_id}', data, 60*10)
+    
+    field = request.GET.get("field", "").strip().lower()
+    query = request.GET.get("query", "").strip().lower()
+
+    if field and query:
+        def matches(info):
+            if field == "student":
+                value = info.get("student_full_name", "").lower()
+            elif field == "teacher":
+                value = info.get("teacher_full_name", "").lower()
+            elif field == "group":
+                value = info.get("student_group_name", "").lower()
+            elif field == "research":
+                value = info.get("researchwork_name", "").lower()
+            elif field == "semester":
+                value = str(info.get("semester", "")).lower()
+            return query in value
+
+        data = list(filter(matches, data))
+    
+    context = {"statistics": data, "students_without_teacher": students_without_teacher, "user_id":user_id, "role": role, "data": response_data}
+    return render(request, 'users/show_statistics.html', context=context)
+
+def export_statistics_excel(request, user_id):
+    # забираем анные из кеша
+    data = cache.get(f"statistics_user_{user_id}")
+
+    if not data:
+        return HttpResponse("Нет данных для экспорта. Обновите страницу и попробуйте снова", status=400)
+    
+    field = request.GET.get("field", "").strip().lower()
+    query = request.GET.get("query", "").strip().lower()
+
+    if field and query:
+        def matches(info):
+            if field == "student":
+                value = info.get("student_full_name", "").lower()
+            elif field == "teacher":
+                value = info.get("teacher_full_name", "").lower()
+            elif field == "group":
+                value = info.get("student_group_name", "").lower()
+            elif field == "research":
+                value = info.get("researchwork_name", "").lower()
+            elif field == "semester":
+                value = str(info.get("semester", "")).lower()
+            else:
+                return False
+            return query in value
+        data = list(filter(matches, data))
+        
+    rows = []
+    for item in data:
+        row = {
+            "ФИО студента": item["student_full_name"],
+            "ФИО руководителя": item["teacher_full_name"],
+            "Группа": item["student_group_name"],
+            "Тип работы": item["researchwork_name"],
+            "Тема работы": item["submission_title"],
+            "Семестр": item["semester"]
+        }
+
+        for topic in item["topics_values"]:
+            row[topic["name"]] = topic["status"]
+        rows.append(row)
+    
+    df = pd.DataFrame(rows)
+    filename = 'статистика.xlsx'
+    encoded_filename = quote(filename)
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    
+    response['Content-Disposition'] = f'attachment; filename=export.xlsx; filename*=UTF-8\'\'{encoded_filename}'
+
+    with pd.ExcelWriter(response, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name="Статистика")
+    
+    return response
+
+                
+                
+
+
+
+
 

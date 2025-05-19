@@ -57,15 +57,34 @@
                       <h5 class="card-title">{{topic_value.topic.name}}</h5>
 
                       {% if topic_value.files and topic_value.files|length > 0 %}
-                      {% with last_file=topic_value.files|last %}
+                      {% for file in topic_value.files|dictsortreversed:"upload_date" %}
+                      <!-- {% with last_file=topic_value.files|last %} -->
                       <a 
-                      href="{% url 'download-file' file_id=last_file.id %}" 
+                      href="{% url 'download-file' file_id=file.id %}" 
                       class="text-white fw-bold d-block text-decoration-underline" 
-                      download="{{ last_file.original_filename }}"
+                      download="{{ file.original_filename }}"
                       >
-                        {{ last_file.original_filename }}
+                        {{ file.original_filename }}
                       </a>
-                      {% endwith %}
+                      <!-- {% endwith %} -->
+                      {% endfor %}
+                      {% if topic_value.is_accepted is True %}
+                      <p class="mt-2 text-success fw-bold">Принято</p>
+                      {% if topic_value.comments and topic_value.comments|length > 0 %}
+                        {% with last_comment=topic_value.comments|last %}
+                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        {% endwith %}
+                      {% endif %}
+                      {% elif topic_value.is_accepted is False %}
+                      <p class="mt-2 text-danger fw-bold">Отклонено</p>
+                      {% if topic_value.comments and topic_value.comments|length > 0 %}
+                        {% with last_comment=topic_value.comments|last %}
+                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        {% endwith %}
+                      {% endif %}
+                      {% else %}
+                      <p class="mt-2 text-warning fw-bold">На рассмотрении</p>
+                      {% endif %}
                       {% else %}
                       <p class="text-white text-center">Файл отсутствует</p>
                       {% endif %}

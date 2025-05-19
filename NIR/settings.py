@@ -149,4 +149,9 @@ FASTAPI_BASE_URL = "http://89.150.34.163:8000/api/v1"
 
 # AUTHENTICATION_BACKENDS = ["users.auth_backends.FastAPIAuthBackend"]
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
 

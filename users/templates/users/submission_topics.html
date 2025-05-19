@@ -57,19 +57,21 @@
                       <h5 class="card-title">{{topic_value.topic.name}}</h5>
 
                       {% if topic_value.files and topic_value.files|length > 0 %}
-                      {% with last_file=topic_value.files|first %}
+                      {% for file in topic_value.files|dictsortreversed:"upload_date" %}
+                      <!-- <p>{{ file.id }} | {{ file.original_filename }} | {{ file.upload_date }}</p> -->
+                      <!-- {% with last_file=topic_value.files|first %} -->
                       <div class="d-flex justify-content-between align-items-center">
                         <a 
-                        href="{% url 'download-file' file_id=last_file.id %}" 
+                        href="{% url 'download-file' file_id=file.id %}" 
                         class="text-white fw-bold d-block text-decoration-underline" 
                         download="{{ last_file.original_filename }}"
                         >
-                          {{ last_file.original_filename }}
+                          {{ file.original_filename }}
                         </a>
 
-                        {% if topic_value.is_accepted is not True and topic_value.is_accepted is not False %}
+                        {% if topic_value.is_accepted == None %}
                       <a 
-                        href="{% url 'delete-file' user_id=user_id file_id=last_file.id %}?submission_id={{submission_data.id}}" 
+                        href="{% url 'delete-file' user_id=user_id file_id=file.id %}?submission_id={{submission_data.id}}" 
                         class="btn btn-sm btn-danger ms-2 d-flex align-items-center justify-content-center" 
                         style="width: 32px; height: 32px;"
                         title="Удалить файл"
@@ -82,7 +84,8 @@
                       </a>
                         {% endif %}
                       </div>
-                      {% endwith %}
+                      <!-- {% endwith %} -->
+                      {% endfor %}
                       {% if topic_value.is_accepted is True %}
                       <p class="mt-2 text-success fw-bold">Принято</p>
                       {% if topic_value.comments and topic_value.comments|length > 0 %}
@@ -105,8 +108,9 @@
                       <p class="text-white text-center">Файл не загружен</p>
                       {% endif %}
                       <!-- Статус -->
-                      
-                      <div class="card-footer">
+                    
+                    {% if topic_value.is_accepted != True %}
+                    <div class="card-footer">
                       <form method="POST" enctype="multipart/form-data" action="">
                         {% csrf_token %}
                         <input type="file" name="file" class="form-control mb-2" required>
@@ -114,6 +118,7 @@
                         <button type="submit" class="btn btn-light btn-sm w-100">Загрузить</button>
                       </form>
                     </div>
+                    {% endif %}
                     </div>
                   </div>
                 </div>

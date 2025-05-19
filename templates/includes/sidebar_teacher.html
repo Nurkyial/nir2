@@ -1,4 +1,4 @@
-{% load static %} {% if user.is_authenticated %}
+{% load static %}
 <div class="sidebar sidebar-dark sidebar-fixed" id="sidebar">
   <div class="sidebar-brand d-none d-md-flex">
     <img
@@ -42,6 +42,13 @@
           ></use></svg>Создать работу</a>   
     </li>
     <li class="nav-group">
+      <a class="nav-link" href="{% url 'show-statistics' user_id %}">
+        <svg class="nav-icon">
+          <use
+            xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-chart-line"
+          ></use></svg>Просмотр статистики</a>   
+    </li>
+    <li class="nav-group">
       <a class="nav-link nav-group-toggle" href="#">
         <svg class="nav-icon">
           <use
@@ -55,4 +62,3 @@
     data-coreui-toggle="unfoldable"
   ></button>
 </div>
-{% endif %}
