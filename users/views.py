@@ -581,14 +581,42 @@ def review_student_submission(request, user_id, student_id, assignment_id):
         messages.error(request, "Ошибка получения информации о работах студента")
         return redirect('review-submissions', user_id)
     submissions_values = submissions.get("values", [])
+    research_works = {
+        1: 'ВКР',
+        2: 'НИР',
+        3: 'УИР',
+        4: 'Зимняя практика',
+        5: 'Летняя практика'
+    }
     context = {
         'role': role,
         'data': data,
         'user_id': user_id,
         'submissions_values': submissions_values,
-        'student_id': student_id
+        'student_id': student_id,
+        'assignment_id': assignment_id,
+        'research_works': research_works
     }
     return render(request, 'users/review_student_submission.html', context=context)
+
+def edit_work(request, user_id, submission_id, student_id, assignment_id):
+    title = request.POST.get("submission_title")
+    researchwork_id = request.POST.get("researchwork_id")
+
+
+    payload = {
+        "submission_id": int(submission_id),
+        "submission_title": title,
+        "researchwork_id": int(researchwork_id)
+    }
+    response, status_code = fastapi_request(f'submission/{submission_id}', method='PATCH', data=payload)
+
+    if status_code == 200:
+        messages.success(request, "Работа успешна обновлена")
+    else:
+        messages.error(request, "Ошибка при обновлении работы")
+    return redirect("review-student-submission", user_id=user_id, student_id=student_id, assignment_id=assignment_id)
+
 
 def review_topics(request, user_id, submission_id):
     teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)

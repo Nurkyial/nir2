@@ -23,7 +23,9 @@ urlpatterns = [
     path('download-file/<int:file_id>/', views.download_file, name='download-file'),
     path('delete-file/<int:user_id>/<int:file_id>/', views.delete_file, name='delete-file'),
     path('show-statistics/<int:user_id>/', views.show_statistics, name='show-statistics'),
-    path('export-statistics-excel/<int:user_id>/', views.export_statistics_excel, name='export-statistics-excel')
+    path('export-statistics-excel/<int:user_id>/', views.export_statistics_excel, name='export-statistics-excel'),
+    path('edit-work/<int:user_id>/<int:submission_id>/<int:student_id>/<int:assignment_id>/edit/', views.edit_work, name='edit-work'),
+
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

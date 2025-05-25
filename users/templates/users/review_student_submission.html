@@ -37,7 +37,17 @@
                     <td>{{ submission.submission_title }}</td>
                     <td>{{ submission.semester }}</td>
                     <td class="text-end">
-                      <button class="btn btn-primary btn-sm">Редактировать</button>
+                      <button 
+                      class="btn btn-primary btn-sm open-edit-modal"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editSubmissionModal"
+                      data-submission-id="{{ submission.id }}"
+                      data-submission-title="{{ submission.submission_title }}"
+                      data-researchwork-id="{{ submission.research_work.id }}"
+                      data-student-id="{{ student_id }}"
+                      data-assignment-id="{{ assignment_id }}"
+                      data-user-id="{{ user_id }}"
+                      >Редактировать</button>
                     </td>
                 </tr>{% endfor %}
                 {% else %}
@@ -48,6 +58,41 @@
             </div>
           </div>
         </div>
+        <!-- Модальное окно -->
+        <div class="modal fade" id="editSubmissionModal" tabindex="-1" aria-labelledby="editSubmissionModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form id="editSubmissionForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title" id="editSubmissionModalLabel">Редактировать работу</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                  <input type="hidden" name="submission_id" id="modal-submission-id">
+                  <div class="mb-3">
+                    <label for="modal-submission-title" class="form-label">Тема работы</label>
+                    <input type="text" class="form-control" name="submission_title" id="modal-submission-title" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="modal-researchwork-id" class="form-label">Тип работы (ID)</label>
+                    <select class="form-select" name="researchwork_id" id="modal-researchwork-id" required>
+                      {% for id, name in research_works.items %}
+                        <option value="{{ id }}">{{ name }}</option>
+                      {% endfor %}
+                    </select>
+                    
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                  <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 </div>
@@ -61,6 +106,33 @@
           if (url) {
             window.location.href = url;
           }
+        });
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const modal = document.getElementById("editSubmissionModal");
+      const submissionIdInput = document.getElementById("modal-submission-id");
+      const titleInput = document.getElementById("modal-submission-title");
+      const researchInput = document.getElementById("modal-researchwork-id");
+  
+      document.querySelectorAll(".open-edit-modal").forEach(button => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+      
+          const submissionId = button.getAttribute("data-submission-id");
+          const studentId = button.getAttribute("data-student-id");
+          const assignmentId = button.getAttribute("data-assignment-id");
+          const userId = button.getAttribute("data-user-id");
+      
+          // Заполняем поля формы
+          document.getElementById("modal-submission-id").value = submissionId;
+          document.getElementById("modal-submission-title").value = button.getAttribute("data-submission-title");
+          document.getElementById("modal-researchwork-id").value = button.getAttribute("data-researchwork-id");
+      
+          // Устанавливаем правильный URL
+          const form = document.getElementById("editSubmissionForm");
+          form.action = `/edit-work/${userId}/${submissionId}/${studentId}/${assignmentId}/edit/`;
         });
       });
     });
