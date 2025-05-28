@@ -23,56 +23,80 @@ from urllib.parse import quote
 
 
 FASTAPI_URL = settings.FASTAPI_BASE_URL
+def registerPage(request):
+    if request.method == 'POST':
+        form_data = {
+            "username": request.POST.get("username").lower(),
+            "password": request.POST.get("password"),
+            "middle_name": request.POST.get("middle_name"),
+            "group_id": 0,
+            "first_name": request.POST.get("first_name"),
+            "last_name": request.POST.get("last_name"),
+            "email": request.POST.get("email"),
+            "role": request.POST.get("role","Student")
+        }
+
+        response, status_code = fastapi_request('auth/register', method='POST', data=form_data)
+
+        if status_code == 201:
+            user_data = response.get("data")
+            username = user_data.get("username")
+            user_id = user_data.get("id")
+
+            # создаем фиктивного пользователя в джанго
+            user, created = User.objects.get_or_create(username=username)
+            if created:
+                user.set_unusable_password()
+                user.save()
+            
+            login(request, user)
+            return redirect_dashboard(user, user_id)
+    
+        else:
+            messages.error(request, f"Ошибка при регистрации: {response.get('error') or response}")
+    return render(request, 'users/register.html')
+
+
 
 def loginPage(request):
     page = 'login'
-    print(1)
     
     if request.method == 'POST':
-        print(2)
         username = request.POST.get('username').lower()
         password = request.POST.get('password')
  
         data = {"username": username, "password": password}
-
         print("Отправляем в FastAPI:", data)
         response, status_code = fastapi_request('auth/login', method='POST', data=data, use_query_params=False)
-        if status_code == 200:
-            user_id = response["data"].get("id")
-            print(f'user_id = {user_id}')
-            print(f"FastAPI Response: {response} and status_code: {status_code}")
-        else:
-            print(f"Ошибка при логине: {response} status_code: {status_code}")
-            messages.error(request, f"Ошибка при логине: {response} status_code: {status_code}")
 
-        user = authenticate(request, username=username, password=password)
-        print(22, user)
-        if user:
-            print(3)
-            login(request, user)
-            return redirect_dashboard(user, user_id)
-        else:
-            # user = User.objects.create(username=username)
+        if status_code == 200:
+            user_data = response.get("data", {})
+            user_id = user_data.get("id")
+
             user, created = User.objects.get_or_create(username=username)
             if created:
-                user.set_password(password)  
+                user.set_unusable_password()
                 user.save()
+
             login(request, user)
             return redirect_dashboard(user, user_id)
+        
+        else:
+            messages.error(request, f"Ошибка при логине: {response} status_code: {status_code}")
  
     context = {"page":page}
     return render(request, 'users/login.html', context=context)
 
 
-def redirect_dashboard(user, user_id):
-    response = redirect_dashboard(user, user_id)
+# def redirect_dashboard(user, user_id):
+#     response = redirect_dashboard(user, user_id)
 
-    response.set_cookie("user_session_jwt", get_jwt())
+#     response.set_cookie("user_session_jwt", get_jwt())
 
-    return response
+#     return response
 
-def get_jwt():
-    return ""
+# def get_jwt():
+#     return ""
 
 def redirect_dashboard(user, user_id):
     print(f"username в джанго: {user.username}")

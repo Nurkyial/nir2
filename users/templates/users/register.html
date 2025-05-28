@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/css/coreui.min.css"
+      rel="stylesheet"
+      integrity="sha384-KGkYqG3gD435LMZAC/8byquZiD5665LheNozmHAqp8vrOKBaBL/bFUO5Er5tMRNi"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.0.0/dist/js/coreui.bundle.min.js"
+      integrity="sha384-Wl6mLWl+C0OgKzQqXtoEXuTkm2RwXManFDTNyMRxPR5zh3DFIUIDhq7Fp1JCFm1V"
+      crossorigin="anonymous"
+    ></script>
+    <title>NIR</title>
+  </head>
+
+  <body>
+    <div class="bg-light min-vh-100 d-flex flex-row align-items-center">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <div class="card-group d-block d-md-flex row">
+              <div class="card col-md-7 p-4 mb-0">
+                <div class="card-body">
+                  <h1>Register</h1>
+                  <p class="text-medium-emphasis">Create your account</p>
+                  <form method="POST" action="{% url 'register' %}">
+                    {% csrf_token %}
+                    <div class="input-group mb-3">
+                        <input class="form-control" type="text" name="username" placeholder="Username" required />
+                    </div>
+                    <div class="input-group mb-3">
+                        <input class="form-control" type="password" name="password" placeholder="Password" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="first_name" placeholder="First Name" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="last_name" placeholder="Last Name" required />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="middle_name" placeholder="Middle Name (optional)" />
+                    </div>
+                    <div class="input-group mb-3">
+                      <input class="form-control" type="email" name="email" placeholder="Email" required />
+                    </div>
+                    {% comment %} <div class="input-group mb-3">
+                      <input class="form-control" type="text" name="group" placeholder="group" required />
+                    </div> {% endcomment %}
+                    <div class="input-group mb-3">
+                      <select class="form-control" name="role" id="roleSelect">
+                        <option value="Student">Student</option>
+                        <option value="Teacher">Teacher</option>
+                      </select>
+                    </div>
+                    
+                    <!-- Поле group_id появится, только если выбрана роль "student" -->
+                    <div class="input-group mb-3" id="groupField" style="display: none;">
+                      <input class="form-control" type="number" name="group_id" placeholder="Group ID (если студент)" />
+                    </div>
+
+                    <div class="row">
+                      <div class="col-6">
+                        <button class="btn btn-primary px-4" type="submit">Register</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
