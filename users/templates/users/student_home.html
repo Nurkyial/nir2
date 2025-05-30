@@ -44,10 +44,10 @@
             {{ data.middle_name }}
             {% endif %}
           </h5>
-          <p class="text-muted">Группа: {{ data.group_id }}</p>
+          <p class="text-muted">Группа: {{ data.group.group_name }}</p>
           <p class="text-muted">Почта: {{ data.email }}</p>
           <!-- Кнопка редактирования -->
-          <a href="{% url 'edit-profile' user_id %}" class="btn btn-outline-primary btn-sm mt-2">
+          <a href="{% url 'edit-profile' %}" class="btn btn-outline-primary btn-sm mt-2">
             <i class="fas fa-edit"></i> Редактировать
           </a>
         </div>
@@ -85,14 +85,14 @@
                   <!-- prettier-ignore -->
                   {% if is_accepted %}
                   <a
-                    href="{% url 'choose-teacher' user_id %}"
+                    href="{% url 'choose-teacher'  %}"
                     class="btn btn-primary"
                   >
                     Изменить</a
                   >
                   {% else %}
                   <a
-                    href="{% url 'choose-teacher' user_id %}"
+                    href="{% url 'choose-teacher' %}"
                     class="btn btn-danger"
                   >
                     Выбрать</a
@@ -127,7 +127,7 @@
               {% for submission in submission_values %} 
               <tr
                 class="clickable-row"
-                data-href="{% url 'submission-topics' user_id=user_id submission_id=submission.id %}"
+                data-href="{% url 'submission-topics' submission_id=submission.id %}"
               >
                 <td>{{ submission.research_work.name }}</td>
                 <td>{{ submission.semester }}</td>

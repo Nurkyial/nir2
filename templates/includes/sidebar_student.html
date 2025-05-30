@@ -12,7 +12,7 @@
   <ul class="sidebar-nav" data-coreui="navigation" data-simplebar="">
     <li class="nav-title">Главная</li>
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'student-home' user_id %}"> <!-- здесь обязательно нужно исправить, чтобы переводил в нужную стрничку для каждой роли -->
+      <a class="nav-link" href="{% url 'student-home' %}"> <!-- здесь обязательно нужно исправить, чтобы переводил в нужную стрничку для каждой роли -->
         <svg class="nav-icon">
           <use
             xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-home"
@@ -23,7 +23,7 @@
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'choose-teacher' user_id %}"
+        href="{% url 'choose-teacher' %}"
       >
         <svg class="nav-icon">
           <use
@@ -36,7 +36,7 @@
     <li class="nav-item">
       <a
         class="nav-link"
-        href="{% url 'student-assignments' user_id %}"
+        href="{% url 'student-assignments' %}"
       >
         <svg class="nav-icon">
           <use

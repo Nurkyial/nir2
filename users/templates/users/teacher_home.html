@@ -27,7 +27,7 @@
           </h5>
           <p class="text-muted">Почта: {{ data.email }}</p>
           <!-- Кнопка редактирования -->
-          <a href="{% url 'edit-profile' user_id %}" class="btn btn-outline-primary btn-sm mt-2">
+          <a href="{% url 'edit-profile' %}" class="btn btn-outline-primary btn-sm mt-2">
             <i class="fas fa-edit"></i> Редактировать
           </a>
         </div>
@@ -56,7 +56,7 @@
 
             <div class="col-auto">
               <a
-                href="{% url 'review-assignment' user_id %}"
+                href="{% url 'review-assignment' %}"
                 class="btn btn-primary"
               >
                 Просмотр</a

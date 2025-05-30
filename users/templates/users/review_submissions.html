@@ -30,7 +30,7 @@
                 {% if students %}
                 {% for student in students %}
                 <tr class="clickable-row"
-                    data-href="{% url 'review-student-submission' user_id student.id student.last_accepted_assignment_subordinate.id %}">
+                    data-href="{% url 'review-student-submission' student.id student.last_accepted_assignment_subordinate.id %}">
                     <td>{{student.last_name}} {{student.first_name}} 
                     {% if student.middle_name and studnt.middle_name != "string" %}
                     {{ student.middle_name }}

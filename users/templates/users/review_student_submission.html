@@ -32,7 +32,7 @@
                 {% if submissions_values %}
                 {% for submission in submissions_values %}
                 <tr class="clickable-row"
-                    data-href="{% url 'review-topics' user_id submission.id %}">
+                    data-href="{% url 'review-topics' submission.id %}">
                     <td>{{ submission.research_work.name }}</td>
                     <td>{{ submission.submission_title }}</td>
                     <td>{{ submission.semester }}</td>

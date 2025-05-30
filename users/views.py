@@ -88,19 +88,18 @@ def loginPage(request):
     return render(request, 'users/login.html', context=context)
 
 
-# def redirect_dashboard(user, user_id):
-#     response = redirect_dashboard(user, user_id)
-
-#     response.set_cookie("user_session_jwt", get_jwt())
-
-#     return response
-
-# def get_jwt():
-#     return ""
-
 def redirect_dashboard(user, user_id):
     print(f"username в джанго: {user.username}")
-    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET")
+
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
     print(f"status code: {status_code} and {"data" not in response}")
 
     if status_code != 200 or "data" not in response:
@@ -109,29 +108,52 @@ def redirect_dashboard(user, user_id):
     
     user_role = response["data"].get("role")
     print(f'user role: {user_role}')
-    print(4)
+
     if not user_role:
         messages.error("Ошибка: профиль пользователя не найден.")
         return redirect('login')
+    
+
     if user_role.lower() == 'student':
-        print(5)
-        return redirect('student-home', user_id=user_id)
+        redirect_path = 'student-home'
     elif user_role.lower() == 'teacher':
-        print(6)
-        return redirect('teacher-home', user_id=user_id)
+        redirect_path = 'teacher-home'
     else:
         messages.error('Unknown user')
         return redirect('login')
 
+    response = redirect(redirect_path)
+
+    # Сохраняем user_id FastAPI в куки
+    response.set_cookie("user_id", user_id, httponly=True, samesite='Lax')
+
+    return response
+    
+
 def logoutUser(request):
+    response = redirect('login')
+    response.delete_cookie("user_id")
     logout(request)
-    return redirect('login')
+    return response
     
 # Student page views
 @login_required
-def student_home(request, user_id):
+def student_home(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
     print("=== Student Home View Started ===")
-    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
     data = response.get("data", {})
     role = data.get("role", None)
     assignment_subordinate = data.get("assignment_subordinate", []) # список всех отпрвленных заявок
@@ -190,6 +212,7 @@ def student_home(request, user_id):
     except Exception as e:
         print(f"Error fetching assignment data: {e}")
 
+    # print(f"group_name = {data.get("group")["group_name"]}")
     context = {
         'data': data,
         'role': role,
@@ -209,53 +232,26 @@ def student_home(request, user_id):
     print(8)
     return render(request, 'users/student_home.html', context)
 
+@login_required
+def submission_topics(request, submission_id):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
 
-def research_work_detail(request, rw_id, subm_id):
-    research_work = get_object_or_404(ResearchWork, pk=rw_id)
-    # submissions = Submission.objects.filter(research_work=research_work, semester=semester)
-    submissions = Submission.objects.filter(assignment__student=request.user.userprofile)
-    submission = get_object_or_404(Submission, pk=subm_id)
-    topics = Topic.objects.filter(research_work=research_work)
-    context =   {'research_work': research_work, 'submissions':submissions, 'topics': topics, 'submission_id':submission.id }
-    return render(request, 'users/topics.html', context=context)
-
-
-def upload_page(request, rw_id, topic_id, subm_id):
-    try:
-        research_work = get_object_or_404(ResearchWork, pk=rw_id)
-    except Http404:
-        print(f"ResearchWork with id={rw_id} not found.")
-        raise
-
-    try:
-        topic =  get_object_or_404(Topic, pk=topic_id)
-    except Http404:
-        print(f"Topic with id={topic_id} not found.")
-        raise
-
-    try:
-        submission = get_object_or_404(Submission, pk=subm_id)
-    except Http404:
-        print(f"Submission with id={subm_id} not found.")
-        raise
-    try:
-        topic_submission = get_object_or_404(TopicSubmission, topic=topic, submission=submission)
-    except Http404:
-        print(f"TopicSubmission with topic_id={topic_id} and submission_id={subm_id} not found.")
-        raise
-
-    form = UploadFileForm()  # This ensures the form is available if needed
-    file_list = File.objects.filter(topic_submission=topic_submission).order_by('-upload_date')
-    print(ResearchWork.objects.filter(pk=1).exists())
-    context = {'research_work':research_work, 'topic':topic, 'submission':submission, 'form': form, 'file_list': file_list}
-    return render(request, 'users/upload_file.html', context)
-
-def submission_topics(request, user_id, submission_id):
-    student_info, student_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if student_status != 200:
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о студенте")
         return redirect('login')
-    data = student_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)
 
     if request.method == 'POST':
@@ -267,7 +263,7 @@ def submission_topics(request, user_id, submission_id):
         if not file or not submission_topic_id:
             print("229")
             print('Файл или submission_topic_id не переданы')
-            return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+            return redirect('submission-topics', submission_id=submission_id)
         
         try:
             print("234")
@@ -289,17 +285,17 @@ def submission_topics(request, user_id, submission_id):
             print(f'Ошибка загрузки: {str(e)}')
 
         print("249")
-        return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+        return redirect('submission-topics', submission_id=submission_id)
 
     topics_data, status = fastapi_request(f"submission/{submission_id}/topics", method="GET", use_query_params=True)
     topics = topics_data.get("values", [])
     if status != 200:
         messages.error(request, "Ошибка получения информации о топиках работы")
-        return  redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+        return  redirect('submission-topics', submission_id=submission_id)
     submission, submission_status = fastapi_request(f"submission/{submission_id}")
     if submission_status != 200:
         messages.error(request, "Ошибка получения информации о работах студента")
-        return  redirect('submission-topics', user_id=user_id, submission_id=submission_id)
+        return  redirect('submission-topics', submission_id=submission_id)
 
     submission_data = submission.get("data", {})
     context = {
@@ -354,7 +350,12 @@ def download_file(request, file_id):
         print(f"Ошибка при скачивании: {e}")
         raise Http404("Ошибка при скачивании файла")
 
-def delete_file(request, user_id, file_id):
+@login_required
+def delete_file(request, file_id):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
     submission_id = request.GET.get('submission_id')
     try:
         response, status_code = fastapi_request('user/remove-file', 'DELETE', data = {'file_id': file_id}, use_query_params=True)
@@ -366,17 +367,29 @@ def delete_file(request, user_id, file_id):
     except Exception as e:
         print(f"Ошибка при удалении файла")
 
-    return redirect('submission-topics', user_id=user_id, submission_id=submission_id)
-        
-def choose_teacher(request, user_id): 
-    print(f'user_id = {user_id}')
-    user_info, status_code_info = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    return redirect('submission-topics', submission_id=submission_id)
 
-    if status_code_info != 200:
+@login_required
+def choose_teacher(request): 
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    print(f'user_id = {user_id}')
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    if status_code != 200:
         messages.error(request, "Не удалось получить информацию о студенте")
-        return redirect('student-home', user_id=user_id)
+        return redirect('student-home')
     
-    student_data = user_info.get("data", {})
+    student_data = response.get("data", {})
     print(f'student data: {student_data}')
     assignment_subordinate = student_data.get("assignment_subordinate", [])
     has_pending_assignment = any(not a["is_reviewed"] for a in assignment_subordinate)
@@ -402,7 +415,7 @@ def choose_teacher(request, user_id):
             return redirect('student-assignments', user_id=user_id)    
         else:
             messages.error(request, f"error creating assignment: {create_assignmenent}")
-            return redirect('choose-teacher', user_id=user_id)
+            return redirect('choose-teacher')
     
     all_teachers, status_code_teachers = fastapi_request("user/all-teachers", method="GET", data=None)
     teachers = []
@@ -416,19 +429,41 @@ def choose_teacher(request, user_id):
     context = {'teachers':teachers, 'user_id':user_id, 'chosen_teacher': assignment_subordinate, 'has_pending_assignment': has_pending_assignment, 'role': role, 'data': student_data}
     return render(request, 'users/choose_teacher.html', context=context)
 
-def assignment_statuses(request, user_id):
-    user_info, status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if status != 200:
+@login_required
+def assignment_statuses(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    if status_code != 200:
         messages.error(request, "Ошибка при получении заявок")
-        return redirect("student-home", user_id=user_id)
-    student_data = user_info.get("data", {})
+        return redirect("student-home")
+    student_data = response.get("data", {})
     role = student_data.get("role", None)
-    assignments = user_info.get("data", {}).get("assignment_subordinate", [])
+    assignments = response.get("data", {}).get("assignment_subordinate", [])
 
     for assignment in assignments:
         teacher_id = assignment.get("teacher_id")
         if teacher_id:
-            teacher_info, teacher_status = fastapi_request(f"user/{teacher_id}/info", method="GET", use_query_params=True)
+            response_user_info_cache_key = f'user_{teacher_id}_info'
+            status_code_user_info_cache_key = f'user_{teacher_id}_info_status_code'
+            teacher_info = cache.get(response_user_info_cache_key)
+            teacher_status = cache.get(status_code_user_info_cache_key)
+            if not response:
+                teacher_info, teacher_status = fastapi_request(f"user/{teacher_id}/info", method="GET", use_query_params=True)
+                cache.set(response_user_info_cache_key, teacher_info, 60*60)
+                cache.set(status_code_user_info_cache_key, teacher_status, 60*60)
+
             if teacher_status == 200:
                 teacher_data = teacher_info.get("data", {})
                 assignment["teacher"] = {
@@ -439,40 +474,64 @@ def assignment_statuses(request, user_id):
     context = {"assignments": assignments, 'data': student_data, 'role': role, 'user_id': user_id}
     return render(request, 'users/assignments_list.html', context=context)
  
-
 # ===============================================================================================================================
 # teacher page views
-
-def teacher_home(request, user_id):
+@login_required
+def teacher_home(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
     print("=== Teacher Home View Started ===")
     print(f"teacher_id = {user_id}")
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
 
-    if teacher_status != 200:
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподователе") 
         return redirect('login')
     
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
+    role = data.get("role", None)
     assignments = data.get("assignment_supervisor", [])
     student_requests_num = len([asgn for asgn in assignments if asgn["is_accepted"] is None])
     active_assignments, active_assignments_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id": user_id}, use_query_params=True)
     if active_assignments_status != 200:
         messages.error(request, "Ошибка при получении списка студентов")
-        return redirect("teacher-home", user_id=user_id)
+        return redirect("teacher-home")
     students = active_assignments.get("values", [])
-    role = teacher_info.get("data", {}).get("role", None)
+    
     context = {'role': role, 'user_id': user_id, 'student_requests_num': student_requests_num, 'students': students, 'data': data}
     
     return render(request, 'users/teacher_home.html', context=context)
 
+@login_required
+def review_assignment(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
 
-def review_assignment(request, user_id):
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if teacher_status != 200:
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподавателе")
         return redirect('login')
     
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)   
     assignments = data.get("assignment_supervisor", [])
 
@@ -480,7 +539,15 @@ def review_assignment(request, user_id):
     for assignment in assignments:
         student_id = assignment.get("student_id")
         if student_id:
-            student_info, student_status = fastapi_request(f"user/{student_id}/info", method="GET", use_query_params=True)
+            response_user_info_cache_key = f'user_{student_id}_info'
+            status_code_user_info_cache_key = f'user_{student_id}_info_status_code'
+            student_info = cache.get(response_user_info_cache_key)
+            student_status = cache.get(status_code_user_info_cache_key)
+            if not response:
+                student_info, student_status = fastapi_request(f"user/{student_id}/info", method="GET", use_query_params=True)
+                cache.set(response_user_info_cache_key, student_info, 60*60)
+                cache.set(status_code_user_info_cache_key, student_status, 60*60)
+
             if student_status == 200:
                 student_data = student_info.get("data", {})
                 assignment["student"] = {
@@ -513,14 +580,20 @@ def review_assignment(request, user_id):
                     messages.info(request, "Assignment успешно отклонен")
                 else:
                     messages.error(request, "Ошибка отклонения assignment")
-            return redirect('review-assignment', user_id=user_id)
+            return redirect('review-assignment')
         except:
             messages.error(request, "Ошибка обработки assignment")
-            return redirect('review-assignment', user_id=user_id)
+            return redirect('review-assignment')
     context = {'role': role, 'user_id': user_id, 'data': data, 'assignments': assignments}
     return render(request, 'users/review_assignment.html', context=context)
 
-def create_submission(request, user_id): # функция которая создает работу для студетов
+@login_required
+def create_submission(request): # функция которая создает работу для студетов
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
     research_works = {
         'ВКР': 1,
         'НИР': 2,
@@ -529,16 +602,24 @@ def create_submission(request, user_id): # функция которая соз�
         'Летняя практика': 5
     } # пока что так, когда появится ручка, нужно ее заменить
 
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if teacher_status != 200:
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподавателе")
         return redirect('login')
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)
     list_students, list_students_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id":user_id}, use_query_params=True)
     if list_students_status != 200:
         messages.error(request, "Ошибка получения списка студентов")
-        return redirect('teacher-home', user_id)
+        return redirect('teacher-home')
     students = list_students.get("values", [])
 
     if request.method == 'POST':
@@ -562,7 +643,7 @@ def create_submission(request, user_id): # функция которая соз�
         except Exception as e:
             print(f"Ошибка при создании submission: {e}")
             messages.error(request, 'Ошибка обработки создания submission')
-            return redirect('teacher-home', user_id)
+            return redirect('teacher-home')
         
     context = {
         'role': role,
@@ -573,17 +654,31 @@ def create_submission(request, user_id): # функция которая соз�
     }
     return render(request, 'users/create_submission.html', context=context)
 
-def review_submissions(request, user_id):
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if teacher_status != 200:
+@login_required
+def review_submissions(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподавателе")
         return redirect('login')
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)
     list_students, list_students_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id":user_id}, use_query_params=True)
     if list_students_status != 200:
         messages.error(request, "Ошибка получения списка студентов")
-        return redirect('teacher-home', user_id)
+        return redirect('teacher-home')
     students = list_students.get("values", [])
     context = {
         'role': role,
@@ -593,17 +688,31 @@ def review_submissions(request, user_id):
     }
     return render(request, 'users/review_submissions.html', context=context)
 
-def review_student_submission(request, user_id, student_id, assignment_id):
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if teacher_status != 200:
+@login_required
+def review_student_submission(request, student_id, assignment_id):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподавателе")
         return redirect('login')
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)
     submissions, submission_status = fastapi_request(f"assignment/{assignment_id}/submissions")
     if submission_status != 200:
         messages.error(request, "Ошибка получения информации о работах студента")
-        return redirect('review-submissions', user_id)
+        return redirect('review-submissions')
     submissions_values = submissions.get("values", [])
     research_works = {
         1: 'ВКР',
@@ -623,7 +732,12 @@ def review_student_submission(request, user_id, student_id, assignment_id):
     }
     return render(request, 'users/review_student_submission.html', context=context)
 
-def edit_work(request, user_id, submission_id, student_id, assignment_id):
+@login_required
+def edit_work(request, submission_id, student_id, assignment_id):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
     title = request.POST.get("submission_title")
     researchwork_id = request.POST.get("researchwork_id")
 
@@ -639,15 +753,28 @@ def edit_work(request, user_id, submission_id, student_id, assignment_id):
         messages.success(request, "Работа успешна обновлена")
     else:
         messages.error(request, "Ошибка при обновлении работы")
-    return redirect("review-student-submission", user_id=user_id, student_id=student_id, assignment_id=assignment_id)
+    return redirect("review-student-submission", student_id=student_id, assignment_id=assignment_id)
 
+@login_required
+def review_topics(request, submission_id):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
 
-def review_topics(request, user_id, submission_id):
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    if teacher_status != 200:
+    if status_code != 200:
         messages.error(request, "Ошибка получения информации о преподавателе")
         return redirect('login')
-    data = teacher_info.get("data", {})
+    data = response.get("data", {})
     role = data.get("role", None)
 
     if request.method == 'POST':
@@ -689,7 +816,7 @@ def review_topics(request, user_id, submission_id):
     submission, submission_status = fastapi_request(f"submission/{submission_id}")
     if submission_status != 200:
         messages.error(request, "Ошибка получения информации о работах студента")
-        return redirect('review-submissions', user_id)
+        return redirect('review-submissions')
 
     submission_data = submission.get("data", {})
     context = {
@@ -704,55 +831,111 @@ def review_topics(request, user_id, submission_id):
 def review_submission_topic(request, topicz_id):
     pass
 
+@login_required
+def edit_profile(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
 
-def edit_profile(request, user_id):
-    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
     response_data = response.get("data", {})
     role = response_data.get("role", None)  
+
+    groups = cache.get("groups")
+    if not groups:
+        groups_response, groups_status = fastapi_request('student/list-groups', method='GET')
+        groups = groups_response.get("values", [])
+        groups.append({'id': 283, 'group_name': 'М23-534'})
+        groups.append({'id': 284, 'group_name': 'М23-514'})
+        groups.append({'id': 285, 'group_name': 'М23-524'})
+        groups.append({'id': 286, 'group_name': 'М23-504'})
+        cache.set("groups", groups, 60*100)
     print(f"edit profile started with role: {role} for user: {response.get("data").get("last_name")}")
     data = {}
+    group_error = None
+    group_name_input = ""
+    group_id = 0
 
     if request.method == 'POST':
-        data = {
-            "target": {
-                "user_id": user_id
-            },
-            "data": {
+        group_name_input = request.POST.get("group_name", "").strip()
+        print(f"group_name_input = {group_name_input}")
+        print(f"groups = {groups}")
+        
+
+        if role and role.lower() == 'student':
+            group_match = next((g for g in groups if g["group_name"].strip().lower() == group_name_input.strip().lower()), None)
+            if not group_match:
+                group_error = "Такой группы не существует."
+            else:
+                group_id = group_match["id"]
+
+        if (role and role.lower() == 'teacher') or (role.lower() == 'student' and not group_error):
+            updated_data = {
                 "email": request.POST.get("email"),
                 "first_name": request.POST.get("first_name"),
                 "last_name": request.POST.get("last_name"),
                 "middle_name": request.POST.get("middle_name"),
-                "group_id": request.POST.get("group_id", 0),
                 "about_me": request.POST.get("about_me")
             }
-        }
 
-        print(f"data from the form: {data}")
-        
-        set_info_response, set_info_status_code = fastapi_request(f"user/set-info", method="PATCH", data=data, use_query_params=False)
+            if role.lower() == 'student':
+                updated_data["group_id"] = group_id
 
-        if set_info_status_code == 201:
-            print(f"Данные пользователя успешно обновлены: {set_info_response}")
-            messages.success(request, "Данные пользователя успешно обновлены.")
-        else:
-            print(f"Ошибка изменения данных пользователя: {set_info_response}")
-            messages.error(request, f"Ошибка: {response.get('error', 'Неизвестная ошибка')}")
+            data = {
+                "target": {
+                    "user_id": user_id
+                },
+                "data": updated_data
+            }
+            
+            set_info_response, set_info_status_code = fastapi_request(f"user/set-info", method="PATCH", data=data)
+
+            if set_info_status_code == 201:
+                print(f"Данные пользователя успешно обновлены: {set_info_response}")
+                messages.success(request, "Данные пользователя успешно обновлены.")
+            else:
+                print(f"Ошибка изменения данных пользователя: {set_info_response}")
+                messages.error(request, f"Ошибка: {response.get('error', 'Неизвестная ошибка')}")
 
     context = {
         "data": response_data,
         "role": role,
-        "user_id": user_id
+        "user_id": user_id,
+        "groups": groups,
+        "group_error":group_error,
+        "group_name": group_name_input
     }
-    print(f"context for edit profile: {context}")
+    # print(f"context for edit profile: {context}")
     return render(request, "users/edit_profile.html", context=context)
   
-
-def show_statistics(request, user_id):
-
+@login_required
+def show_statistics(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
     students_without_teacher = []
-    teacher_info, teacher_status = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-    response_data = teacher_info.get("data", {})
-    role = teacher_info.get("data").get("role", None) 
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    response_data = response.get("data", {})
+    role = response_data.get("role", None) 
     print(f"user_id in statistics = {user_id} and role = {role}")
     research_works = {
         1: 'ВКР',
@@ -762,7 +945,6 @@ def show_statistics(request, user_id):
         5: 'Летняя практика'
     } # пока что так, когда появится ручка, нужно ее заменить
 
-    
     all_students = cache.get("all_students")
     if not all_students:
         response, status_code = fastapi_request('user/all-students', method='GET')
@@ -772,7 +954,6 @@ def show_statistics(request, user_id):
     data = cache.get(f"statistics_user_{user_id}")
     if not data:
         data = []
-        
 
         for student in all_students:
             student_first_name = student.get("first_name", "")
@@ -864,7 +1045,13 @@ def show_statistics(request, user_id):
     context = {"statistics": data, "students_without_teacher": students_without_teacher, "user_id":user_id, "role": role, "data": response_data}
     return render(request, 'users/show_statistics.html', context=context)
 
-def export_statistics_excel(request, user_id):
+@login_required
+def export_statistics_excel(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        messages.error(request, 'Ошибка получения user_id из куки')
+        return redirect('login')
+    
     # забираем анные из кеша
     data = cache.get(f"statistics_user_{user_id}")
 
@@ -920,11 +1107,3 @@ def export_statistics_excel(request, user_id):
         df.to_excel(writer, index=False, sheet_name="Статистика")
     
     return response
-
-                
-                
-
-
-
-
-

@@ -41,7 +41,18 @@
               {% if role == "Student" %}
               <div class="col-md-6">
                 <label class="form-label">Группа</label>
-                <input type="text" name="group_id" class="form-control" value="{{ 0 }}">
+                <input type="text" name="group_name" class="form-control {% if group_error %}is-invalid{% endif %}" list="group-list" value="{{ group_name }}">
+                <datalist id="group-list">
+                  {% for group in groups %}
+                    <option value="{{group.group_name}}"></option>
+                  {% endfor %}
+                </datalist>
+                {% if group_error %}
+                  <div class="invalid-feedback">
+                    {{group_error}}
+                  </div>
+                {% endif %}
+                
               </div>
               {% endif %}
               <div class="col-md-6">
@@ -54,9 +65,9 @@
 
         <div class="d-flex justify-content-end">
           {% if role == "Student" %}
-            <a href="{% url 'student-home' user_id %}" class="btn btn-secondary me-2">Назад</a>
+            <a href="{% url 'student-home' %}" class="btn btn-secondary me-2">Назад</a>
           {% elif role == "Teacher" %}
-            <a href="{% url 'teacher-home' user_id %}" class="btn btn-secondary me-2">Назад</a>
+            <a href="{% url 'teacher-home' %}" class="btn btn-secondary me-2">Назад</a>
           {% endif %}
           <button type="submit" class="btn btn-primary">Сохранить</button>
         </div>

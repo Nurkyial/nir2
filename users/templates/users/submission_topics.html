@@ -71,7 +71,7 @@
 
                         {% if topic_value.is_accepted == None %}
                       <a 
-                        href="{% url 'delete-file' user_id=user_id file_id=file.id %}?submission_id={{submission_data.id}}" 
+                        href="{% url 'delete-file' file_id=file.id %}?submission_id={{submission_data.id}}" 
                         class="btn btn-sm btn-danger ms-2 d-flex align-items-center justify-content-center" 
                         style="width: 32px; height: 32px;"
                         title="Удалить файл"
