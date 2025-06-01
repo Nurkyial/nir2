@@ -50,6 +50,33 @@
             >
               <div class="row">
                 {% for topic_value in topics %}
+                <!-- Модальное окно комментариев -->
+                <div class="modal fade" id="commentsModal{{ topic_value.id }}" tabindex="-1" aria-labelledby="commentsModalLabel{{ topic_value.id }}" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="commentsModalLabel{{ topic_value.id }}">Комментарии</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                      </div>
+                      <div class="modal-body">
+                        {% if topic_value.comments %}
+                          {% for comment in topic_value.comments|dictsortreversed:"created_at" %}
+                            <div class="mb-2">
+                              <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small><br>
+                              {{ comment.comment }}
+                            </div>
+                          {% endfor %}
+                        {% else %}
+                          <p>Нет комментариев</p>
+                        {% endif %}
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="col-xl-4 mb-4">
                   <div class="card text-white bg-info clickable-card">
                     <div class="card-header">{{submission_data.research_work.name}}</div>
@@ -72,14 +99,29 @@
                       <p class="mt-2 text-success fw-bold">Принято</p>
                       {% if topic_value.comments and topic_value.comments|length > 0 %}
                         {% with last_comment=topic_value.comments|last %}
-                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        <button 
+                        type="button" 
+                        class="btn btn-sm btn-light mt-2" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#commentsModal{{ topic_value.id }}"
+                        >
+                          Показать комментарии
+                        </button>                      
                         {% endwith %}
                       {% endif %}
                       {% elif topic_value.is_accepted is False %}
                       <p class="mt-2 text-danger fw-bold">Отклонено</p>
                       {% if topic_value.comments and topic_value.comments|length > 0 %}
                         {% with last_comment=topic_value.comments|last %}
-                          <p class="mt-2 fw-bold">Комментарий: {{ last_comment.comment }}</p>
+                        <button 
+                        type="button" 
+                        class="btn btn-sm btn-light mt-2" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#commentsModal{{ topic_value.id }}"
+                        >
+                          Показать комментарии
+                        </button>
+                      
                         {% endwith %}
                       {% endif %}
                       {% else %}

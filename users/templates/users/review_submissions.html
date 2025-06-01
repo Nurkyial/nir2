@@ -36,7 +36,13 @@
                     {{ student.middle_name }}
                     {% endif %}
                     </td>
-                    <td>{{student.group_id}}</td>
+                    <td>
+                      {% if student.group %}
+                      {{student.group.group_name}}
+                      {% else %}
+                      Группа не указана
+                      {% endif %}
+                      </td>
                 </tr>{% endfor %}
                 {% else %}
                 <td>У вас пока нет студентов</td>

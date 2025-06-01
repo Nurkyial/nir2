@@ -580,6 +580,7 @@ def teacher_home(request):
     
     data = response.get("data", {})
     role = data.get("role", None)
+    print(f'teacher role = {role}')
     assignments = data.get("assignment_supervisor", [])
     student_requests_num = len([asgn for asgn in assignments if asgn["is_accepted"] is None])
     active_assignments, active_assignments_status = fastapi_request(f"teacher/list-students", method="GET", data={"teacher_id": user_id}, use_query_params=True)
@@ -657,63 +658,25 @@ def review_assignment(request):
             if action == 'accept':
                 response, status = fastapi_request('teacher/accept-assignment', method='PATCH', data=action_data, use_query_params=False)
                 if status == 200:
-                    messages.info(request, "Assignment успешно создан")
+                    messages.info(request, "Заявка успешно принята")
                 else:
-                    messages.error(request, "Ошибка приянтия assignment")
+                    messages.error(request, "Ошибка приянтия заявки")
             elif action == 'decline':
                 response, status = fastapi_request('teacher/decline-assignment', method='PATCH', data=action_data, use_query_params=False)
                 if status == 200:
-                    messages.info(request, "Assignment успешно отклонен")
+                    messages.info(request, "Заявка отклонена")
                 else:
-                    messages.error(request, "Ошибка отклонения assignment")
+                    messages.error(request, "Ошибка отклонения заявки")
+            
+            cache.delete(f'user_{user_id}_info')
+            cache.delete(f'user_{user_id}_info_status_code')
+
             return redirect('review-assignment')
         except:
-            messages.error(request, "Ошибка обработки assignment")
+            messages.error(request, "Ошибка обработки заявки")
             return redirect('review-assignment')
     context = {'role': role, 'user_id': user_id, 'data': data, 'assignments': assignments}
     return render(request, 'users/review_assignment.html', context=context)
-
-def fetch_assignments_for_teacher(user_id):
-    response_user_info_cache_key = f'user_{user_id}_info'
-    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
-
-    response = cache.get(response_user_info_cache_key)
-    status_code = cache.get(status_code_user_info_cache_key)
-
-    if not response:
-        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-        cache.set(response_user_info_cache_key, response, 60 * 60)
-        cache.set(status_code_user_info_cache_key, status_code, 60 * 60)
-
-    if status_code != 200:
-        return None, None
-
-    data = response.get("data", {})
-    assignments = data.get("assignment_supervisor", [])
-
-    for assignment in assignments:
-        student_id = assignment.get("student_id")
-        if student_id:
-            response_user_info_cache_key = f'user_{student_id}_info'
-            status_code_user_info_cache_key = f'user_{student_id}_info_status_code'
-            student_info = cache.get(response_user_info_cache_key)
-            student_status = cache.get(status_code_user_info_cache_key)
-            if not student_info:
-                student_info, student_status = fastapi_request(f"user/{student_id}/info", method="GET", use_query_params=True)
-                cache.set(response_user_info_cache_key, student_info, 60 * 60)
-                cache.set(status_code_user_info_cache_key, student_status, 60 * 60)
-
-            if student_status == 200:
-                student_data = student_info.get("data", {})
-                group_name = student_data.get("group", {}).get("group_name", "Группа не указана")
-                assignment["student"] = {
-                    "first_name": student_data.get("first_name", ""),
-                    "last_name": student_data.get("last_name", ""),
-                    "middle_name": student_data.get("middle_name", ""),
-                    "group": group_name
-                }
-    return data, assignments
-
 
 @login_required
 def create_submission(request): # функция которая создает работу для студетов
@@ -765,12 +728,12 @@ def create_submission(request): # функция которая создает �
             response, status = fastapi_request(f'teacher/create-submission', method='POST', data=submission_data, use_query_params=True)
 
             if status == 200:
-                    messages.info(request, "Submission успешно создан")
+                    messages.info(request, "Работа успешно создана")
             else:
-                messages.error(request, "Ошибка создания Submission")
+                messages.error(request, "Ошибка создания работы")
         except Exception as e:
             print(f"Ошибка при создании submission: {e}")
-            messages.error(request, 'Ошибка обработки создания submission')
+            messages.error(request, 'Ошибка создания работы')
             return redirect('teacher-home')
         
     context = {
@@ -938,6 +901,13 @@ def review_topics(request, submission_id):
 
     topics_data, status = fastapi_request(f"submission/{submission_id}/topics", method="GET", use_query_params=True)
     topics = topics_data.get("values", [])
+    for topic in topics:
+        for comment in topic.get("comments", []):
+            try:
+                # Добавляем поддержку ISO с микросекундами
+                comment["created_at"] = datetime.fromisoformat(comment["created_at"])
+            except Exception as e:
+                print(f"Ошибка обработки даты комментария: {e}")
     if status != 200:
         messages.error(request, "Ошибка получения информации о топиках работы")
         return redirect('review-student-submission')
@@ -1267,3 +1237,7 @@ def mobile_app_view(request):
 
     context = {'data': response_data, 'user_id': user_id, 'role': role}
     return render(request, 'users/mobile_app.html', context=context)
+
+def set_user_info_cache(user_id, response, status_code):
+    cache.set(f'user_{user_id}_info', response, 60*60)
+    cache.set(f'user_{user_id}_info_status_code', status_code, 60*60)

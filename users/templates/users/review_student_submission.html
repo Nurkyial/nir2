@@ -35,7 +35,7 @@
                     data-href="{% url 'review-topics' submission.id %}">
                     <td>{{ submission.research_work.name }}</td>
                     <td>{{ submission.submission_title }}</td>
-                    <td>{{ submission.semester }}</td>
+                    <td>{{ submission.semester|default:"Весенний семестр 2024/2025 учебного года" }}</td>
                     <td class="text-end">
                       <button 
                       class="btn btn-primary btn-sm open-edit-modal"
@@ -132,7 +132,7 @@
       
           // Устанавливаем правильный URL
           const form = document.getElementById("editSubmissionForm");
-          form.action = `/edit-work/${userId}/${submissionId}/${studentId}/${assignmentId}/edit/`;
+          form.action = `/edit-work/${submissionId}/${studentId}/${assignmentId}/edit/`;
         });
       });
     });

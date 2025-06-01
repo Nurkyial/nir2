@@ -33,15 +33,23 @@
             {{ data.middle_name|slice:":1" }}.
             {% endif %}
         </span>
-        
         <!-- АВАТАР -->
-        <img
-          src="{% static 'images/cat.png' %}"
+         {% if role|lower == 'student' %}
+         <img
+         src="{% static 'images/cat.png' %}"
+         alt="Аватар"
+         class="rounded-circle"
+         style="width: 36px; height: 36px; object-fit: cover;"
+       />
+       {% elif role|lower == 'teacher' %}
+       <img
+          src="{% static 'images/cat_teacher.jpg' %}"
           alt="Аватар"
           class="rounded-circle"
           style="width: 36px; height: 36px; object-fit: cover;"
         />    
-        </a>
+        {% endif %}
+      </a>
 
         <!-- Выпадающее меню -->
         <div class="dropdown-menu dropdown-menu-end pt-0">
@@ -51,16 +59,6 @@
             </svg>
             Выйти</a
           >
-          {% comment %}
-          <a class="dropdown-item" href="{% url 'logout' %}">
-            <svg class="icon me-2">
-              <use
-                xlink:href="/static/assets/vendors/@coreui/icons/svg/free.svg#cil-account-logout"
-              ></use>
-            </svg>
-            Logout</a
-          >
-          {% endcomment %}
         </div>
       </li>
     </ul>

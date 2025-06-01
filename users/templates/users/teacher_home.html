@@ -74,9 +74,10 @@
           <table class="table table-hover">
             <thead>
               <tr>
-                <th style="width: 20%" scope="col">#</th>
+                <th style="width: 5%" scope="col">№</th>
                 <th style="width: 20%" scope="col">ФИО студента</th>
-                <th style="width: 20%" scope="col">Группа</th>
+                <th style="width: 15%" scope="col">Группа</th>
+                <th style="width: 20%" scope="col">Семестр</th>
               </tr>
             </thead>
             <tbody>
@@ -90,7 +91,14 @@
                   {{ student.middle_name }}
                   {% endif %}
                 </td>
-                <td>{{student.group_id}}</td>
+                <td>
+                  {% if student.group %}
+                  {{student.group.group_name}}
+                  {% else %}
+                  Группа не указана
+                  {% endif %}
+                </td>
+                <td>Весенний семестр 2024/2025 учебного года</td>
               </tr>{% endfor %}
               {% else %}
               <td>У вас пока нет студентов</td>
