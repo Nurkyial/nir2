@@ -4,12 +4,11 @@
     <button
       class="header-toggler px-md-0 me-md-3"
       type="button"
-      onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"
-    >
+      onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
       <svg class="icon icon-lg">
         <use xlink:href="/static/assets/free.svg#cil-menu"></use>
-      </svg></button
-    ><a class="header-brand d-md-none" href="#">
+      </svg></button>
+      <a class="header-brand d-md-none" href="#">
       <img src="{% static 'images/НИЯУ_МИФИ_лого2023.png' %}" alt="НИЯУ МИФИ" style="height: 40px;">
     </a>
 
@@ -22,8 +21,7 @@
           href="#"
           role="button"
           aria-haspopup="true"
-          aria-expanded="false"
-        >
+          aria-expanded="false">
 
          <!-- ФИО -->
          <span class="fw-semibold text-dark me-2">
@@ -38,15 +36,13 @@
          src="{% static 'images/cat.png' %}"
          alt="Аватар"
          class="rounded-circle"
-         style="width: 36px; height: 36px; object-fit: cover;"
-       />
+         style="width: 36px; height: 36px; object-fit: cover;"/>
        {% elif role|lower == 'teacher' %}
        <img
           src="{% static 'images/cat_teacher.jpg' %}"
           alt="Аватар"
           class="rounded-circle"
-          style="width: 36px; height: 36px; object-fit: cover;"
-        />    
+          style="width: 36px; height: 36px; object-fit: cover;"/>    
         {% endif %}
       </a>
 
@@ -56,8 +52,7 @@
             <svg class="icon me-2">
               <use xlink:href="/static/assets/free.svg#cil-user"></use>
             </svg>
-            Выйти</a
-          >
+            Выйти</a>
         </div>
       </li>
     </ul>

@@ -79,7 +79,6 @@ def registerPage(request):
             except Exception as e:
                 print("Error parsing error detail:", e)
                 messages.error(request, "Ошибка при регистрации.")
-
     return render(request, 'users/register.html')
 
 def loginPage(request):
@@ -103,10 +102,9 @@ def loginPage(request):
                 user.save()
 
             login(request, user)
-            redirect_response = redirect_dashboard(user, user_id)
-            redirect_response.set_cookie("user_id", user_id, httponly=True, samesite='Lax')
-            return redirect_response
-        
+            response = render(request, 'users/redirect_with_cookie.html', context={'user_id': user_id})
+            response.set_cookie("user_id", user_id, httponly=True, samesite='Lax')
+            return response
         else:
             messages.error(request, f"Ошибка при логине: {response} status_code: {status_code}")
  
