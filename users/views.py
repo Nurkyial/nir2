@@ -135,7 +135,6 @@ def redirect_dashboard(user, user_id):
         response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
         cache.set(response_user_info_cache_key, response, 60*60)
         cache.set(status_code_user_info_cache_key, status_code, 60*60)
-    print(f"status code: {status_code} and {"data" not in response}")
 
     if status_code != 200 or "data" not in response:
         print("Ошибка получения пользователя")
