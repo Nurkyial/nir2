@@ -62,7 +62,15 @@
                     <div class="input-group mb-3" id="groupField" style="display: none;">
                       <input class="form-control" type="number" name="group_id" placeholder="Group ID (если студент)" />
                     </div>
-
+                    {% if messages %}
+                      <div class="mb-3">
+                        {% for message in messages %}
+                          <div class="alert alert-warning" role="alert">
+                            {{ message }}
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                     <div class="row">
                       <div class="col-6">
                         <button class="btn btn-primary px-4" type="submit">Register</button>

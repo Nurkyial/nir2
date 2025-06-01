@@ -21,6 +21,7 @@ from django.core.cache import cache
 import pandas as pd
 from datetime import datetime
 from urllib.parse import quote
+import json
 
 FASTAPI_URL = settings.FASTAPI_BASE_URL
 def registerPage(request):
@@ -55,7 +56,30 @@ def registerPage(request):
             return response
     
         else:
-            messages.error(request, f"Ошибка при регистрации: {response.get('error') or response}")
+            error_string = response.get("error", "")
+            try:
+                # извлекаем JSON из текста ошибки (после ":")
+                if ":" in error_string:
+                    json_part = error_string.split(":", 1)[1].strip()
+                    error_data = json.loads(json_part)
+                else:
+                    error_data = {}
+
+                detail = error_data.get("detail")
+                if isinstance(detail, list):
+                    for item in detail:
+                        loc = item.get("loc", [])
+                        msg = item.get("msg", "Ошибка")
+                        if "password" in loc and item.get("type") == "string_too_short":
+                            messages.error(request, "Пароль должен содержать не менее 8 символов.")
+                        else:
+                            messages.error(request, msg)
+                else:
+                    messages.error(request, "Ошибка при регистрации.")
+            except Exception as e:
+                print("Error parsing error detail:", e)
+                messages.error(request, "Ошибка при регистрации.")
+
     return render(request, 'users/register.html')
 
 def loginPage(request):
@@ -421,6 +445,10 @@ def choose_teacher(request):
         }
         create_assignmenent, status_code_asgn = fastapi_request("student/create-assignment", method="POST", data=create_assignment_data)
         if create_assignmenent.get("msg") == "success" and status_code_asgn == 201:
+            # обновление кеша после пост запроса
+            response, status_code = fastapi_request(f"user/{user_id}/info", method=True, use_query_params=True)
+            cache.set(response_user_info_cache_key, response, 60*60)
+            cache.set(status_code_user_info_cache_key, status_code, 60*60)
             return redirect('student-assignments')    
         else:
             messages.error(request, f"error creating assignment: {create_assignmenent}")
@@ -670,6 +698,12 @@ def review_assignment(request):
             
             cache.delete(f'user_{user_id}_info')
             cache.delete(f'user_{user_id}_info_status_code')
+
+            for assignment in assignments:
+                student_id = assignment.get("student_id")
+                if student_id:
+                    cache.delete(f'user_{student_id}_info')
+                    cache.delete(f'user_{student_id}_info_status_code')
 
             return redirect('review-assignment')
         except:
