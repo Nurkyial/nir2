@@ -130,7 +130,7 @@
                 data-href="{% url 'submission-topics' submission_id=submission.id %}"
               >
                 <td>{{ submission.research_work.name }}</td>
-                <td>{{ submission.semester }}</td>
+                <td>{{ submission.semester|default:"Весенний семестр 2024/2025 учебного года" }}</td>
                 <td>
                   {{ teacher_last_name }} {{teacher_first_name}}
                   {% if teacher_middle_name and teacher_middle_name != "string" %}

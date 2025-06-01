@@ -10,7 +10,7 @@ urlpatterns = [
     path('logout/', views.logoutUser, name='logout'),
     path('student/', views.student_home, name='student-home'),
     path('teacher/', views.teacher_home, name='teacher-home'),
-    path('submission-topics//<int:submission_id>/', views.submission_topics, name='submission-topics'),
+    path('submission-topics/<int:submission_id>/', views.submission_topics, name='submission-topics'),
     path('choose-teacher/', views.choose_teacher, name='choose-teacher'),
     path('edit-profile/', views.edit_profile, name='edit-profile'),
     path('student/assignments/', views.assignment_statuses, name="student-assignments"),
@@ -24,7 +24,9 @@ urlpatterns = [
     path('show-statistics/', views.show_statistics, name='show-statistics'),
     path('export-statistics-excel/', views.export_statistics_excel, name='export-statistics-excel'),
     path('edit-work/<int:submission_id>/<int:student_id>/<int:assignment_id>/edit/', views.edit_work, name='edit-work'),
-
+    path('mobile-app/', views.mobile_app_view, name='mobile-app'),
+    path('redirect-dashboard/', views.dashboard_redirect_view, name='redirect-dashboard'),
+    path('my-works/', views.my_works, name='my-works'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

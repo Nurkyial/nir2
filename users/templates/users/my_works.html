@@ -1,0 +1,90 @@
+{% extends "main.html" %}
+{% load static %}
+{% block head %}
+<style>
+  .clickable-card {
+    cursor: pointer;
+  }
+  tr { 
+    cursor: pointer;
+  }
+</style>
+{% block extra_js %}
+<!-- <script src="{% static 'js/student_home.js' %}"></script> -->
+<script>
+  document.querySelector('form').setAttribute('data-teacher-assigned', '{{ teacher_assigned|yesno:"true,false" }}');
+</script>
+{% endblock extra_js %} 
+
+<style>
+  .profile-card {
+    text-align: center;
+  }
+  .profile-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="body flex-grow-1 px-3">
+  <div class="container-lg">
+    <!-- Блок "Мои работы" -->
+    <div class="card">
+      <div class="card-header">
+        <strong>Мои работы</strong>
+      </div>
+      <div class="card-body">
+        <div class="example">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="width: 20%" scope="col">Работа</th>
+                <th style="width: 20%" scope="col">Семестр</th>
+                <th style="width: 20%" scope="col">Научный руководитель</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if submission_values%}
+              {% for submission in submission_values %} 
+              <tr
+                class="clickable-row"
+                data-href="{% url 'submission-topics' submission_id=submission.id %}"
+              >
+                <td>{{ submission.research_work.name }}</td>
+                <td>{{ submission.semester|default:"Весенний семестр 2024/2025 учебного года" }}</td>
+                <td>
+                  {{ teacher_last_name }} {{teacher_first_name}}
+                  {% if teacher_middle_name and teacher_middle_name != "string" %}
+                  {{ teacher_middle_name }}
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              <tr>
+                <td>Преподователь еще не определил работу</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const clickableRows = document.querySelectorAll(".clickable-row");
+    clickableRows.forEach((row) => {
+      row.addEventListener("click", function () {
+        window.location.href = this.getAttribute("data-href");
+      });
+    });
+  });
+</script>
+{% endblock content %}
