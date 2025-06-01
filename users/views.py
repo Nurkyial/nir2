@@ -990,7 +990,7 @@ def edit_profile(request):
         # groups.append({'id': 285, 'group_name': 'М23-524'})
         # groups.append({'id': 286, 'group_name': 'М23-504'})
         cache.set("groups", groups, 60*100)
-    print(f"edit profile started with role: {role} for user: {response.get("data").get("last_name")}")
+
     data = {}
     group_error = None
     group_name_input = ""
