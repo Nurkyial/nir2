@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+ob#5g6fkmk&286*1082q7*n9v7h=121mby-$on#8yk3bxyk$*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['nir2.onrender.com']
+ALLOWED_HOSTS = ['nir2.onrender.com', '127.0.0.1','localhost']
 
 
 # Application definition
@@ -56,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     # "NIR.middleware.FastAPIAuthMiddleware",
 ]
 
