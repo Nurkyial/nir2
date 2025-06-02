@@ -441,7 +441,7 @@ def choose_teacher(request):
         create_assignmenent, status_code_asgn = fastapi_request("student/create-assignment", method="POST", data=create_assignment_data)
         if create_assignmenent.get("msg") == "success" and status_code_asgn == 201:
             # обновление кеша после пост запроса
-            response, status_code = fastapi_request(f"user/{user_id}/info", method=True, use_query_params=True)
+            response, status_code = fastapi_request(f"user/{user_id}/info", method='GET', use_query_params=True)
             cache.set(response_user_info_cache_key, response, 60*60)
             cache.set(status_code_user_info_cache_key, status_code, 60*60)
             return redirect('student-assignments')    
