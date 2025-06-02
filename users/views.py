@@ -72,8 +72,6 @@ def registerPage(request):
                         msg = item.get("msg", "Ошибка")
                         if "password" in loc and item.get("type") == "string_too_short":
                             messages.error(request, "Пароль должен содержать не менее 8 символов.")
-                        else:
-                            messages.error(request, msg)
                 else:
                     messages.error(request, "Ошибка при регистрации.")
             except Exception as e:
@@ -106,7 +104,7 @@ def loginPage(request):
             response.set_cookie("user_id", user_id, httponly=True, samesite='Lax')
             return response
         else:
-            messages.error(request, f"Ошибка при логине: {response} status_code: {status_code}")
+            messages.error(request, f"Ошибка при логине")
  
     context = {"page":page}
     return render(request, 'users/login.html', context=context)

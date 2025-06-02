@@ -26,8 +26,8 @@
             <div class="card-group d-block d-md-flex row">
               <div class="card col-md-7 p-4 mb-0">
                 <div class="card-body">
-                  <h1>Login</h1>
-                  <p class="text-medium-emphasis">Sign In to your account</p>
+                  <h1>Вход</h1>
+                  <br>
                   <form method="POST" action="">
                     {% csrf_token %}
                     <div class="input-group mb-3">
@@ -44,7 +44,7 @@
                         class="form-control"
                         type="text"
                         name="username"
-                        placeholder="Username"
+                        placeholder="Имя пользователя"
                       />
                     </div>
                     <div class="input-group mb-4">
@@ -58,18 +58,18 @@
                         class="form-control"
                         type="password"
                         name="password"
-                        placeholder="Password"
+                        placeholder="Пароль"
                       />
                     </div>
                     <div class="row">
                       <div class="col-6">
                         <button class="btn btn-primary px-4" type="submit">
-                          Login
+                          Войти
                         </button>
                       </div>
                       <div class="col-6 text-end">
-                        <span>Don’t have an account?</span>
-                        <a href="{% url 'register' %}" class="btn btn-link">Register here</a>
+                        <span>Еще не регистрировался?</span>
+                        <a href="{% url 'register' %}" class="btn btn-link">Регистрация</a>
                       </div>
                     </div>
                   </form>
