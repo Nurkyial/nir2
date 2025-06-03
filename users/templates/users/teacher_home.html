@@ -25,6 +25,7 @@
             {{ data.middle_name }}
             {% endif %}
           </h5>
+          <p class="text-muted">Имя пользователя: {{ data.username }}</p>
           <p class="text-muted">Почта: {{ data.email }}</p>
           <!-- Кнопка редактирования -->
           <a href="{% url 'edit-profile' %}" class="btn btn-outline-primary btn-sm mt-2">

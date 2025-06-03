@@ -96,7 +96,7 @@ def loginPage(request):
 
             user, created = User.objects.get_or_create(username=username)
             if created:
-                user.set_unusable_password()
+                user.set_unusable_password() 
                 user.save()
 
             login(request, user)
@@ -160,7 +160,7 @@ def student_home(request):
     user_id = request.COOKIES.get("user_id")
     print(f'user_id = {user_id}')
     if not user_id:
-        messages.error(request, 'Ошибка получения user_id из куки')
+        # messages.error(request, 'Ошибка получения user_id из куки')
         print('Ошибка получения user_id из куки')
         return redirect('login')
     
@@ -441,9 +441,13 @@ def choose_teacher(request):
         create_assignmenent, status_code_asgn = fastapi_request("student/create-assignment", method="POST", data=create_assignment_data)
         if create_assignmenent.get("msg") == "success" and status_code_asgn == 201:
             # обновление кеша после пост запроса
-            response, status_code = fastapi_request(f"user/{user_id}/info", method='GET', use_query_params=True)
-            cache.set(response_user_info_cache_key, response, 60*60)
-            cache.set(status_code_user_info_cache_key, status_code, 60*60)
+            # response, status_code = fastapi_request(f"user/{user_id}/info", method='GET', use_query_params=True)
+            # cache.set(response_user_info_cache_key, response, 60*60)
+            # cache.set(status_code_user_info_cache_key, status_code, 60*60)
+            cache.delete(f"user_{user_id}_info")
+            cache.delete(f"user_{user_id}_info_status_code")
+            cache.delete(f"user_{teacher_id}_info")
+            cache.delete(f"user_{teacher_id}_info_status_code")
             return redirect('student-assignments')    
         else:
             messages.error(request, f"error creating assignment: {create_assignmenent}")
@@ -1267,6 +1271,121 @@ def mobile_app_view(request):
     context = {'data': response_data, 'user_id': user_id, 'role': role}
     return render(request, 'users/mobile_app.html', context=context)
 
-def set_user_info_cache(user_id, response, status_code):
-    cache.set(f'user_{user_id}_info', response, 60*60)
-    cache.set(f'user_{user_id}_info_status_code', status_code, 60*60)
+@login_required
+def notifications(request):
+    user_id = request.COOKIES.get("user_id")
+    if not user_id:
+        return redirect('login')
+    
+    response_user_info_cache_key = f'user_{user_id}_info'
+    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
+    response = cache.get(response_user_info_cache_key)
+    status_code = cache.get(status_code_user_info_cache_key)
+    if not response:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_user_info_cache_key, response, 60*60)
+        cache.set(status_code_user_info_cache_key, status_code, 60*60)
+
+    response_data = response.get("data", {})
+    role = response_data.get("role", None)  
+
+    notifications_response, status = fastapi_request(f"user/{user_id}/notifications", method="GET", use_query_params=True)
+    notifications = []
+
+    if status == 200:
+        for notif in notifications_response.get("values", []):
+            message = None
+            notif_type = notif["type"]
+            entities = {e["entity_model"]: e["entity_id"] for e in notif.get("entities", [])}
+            topic_name = None
+            file_name = None
+            submission_id = None
+            submission_topic_id = None
+            student_full_name = None
+
+            for entity in notif.get("entities", []):
+                if entity["entity_model"] == "submission":
+                    submission_id = entity["entity_id"]
+                elif entity["entity_model"] == "submission_topic":
+                    submission_topic_id = entity["entity_id"]
+
+            #Если студент
+            if role.lower() == "student" and notif_type in ["submission_accepted", "submission_declined"]:
+                if notif_type == "submission_accepted":
+                    message = "Преподаватель принял вашу работу."
+                elif notif_type == "submission_declined":
+                    message = "Преподаватель отклонил вашу работу."
+                topic_id = entities.get("submission_topic")
+                topic_name = None
+                submission_title = None
+                created_at = notif["created_at"]
+                is_read = notif["is_read"]
+                comment = None
+                sub_id = entities.get("submission")
+                topic_id = entities.get("submission_topic")
+                if sub_id and topic_id:
+                    topics_resp, topics_status = fastapi_request(f"submission/{sub_id}/topics", method="GET", use_query_params=True)
+                    if topics_status == 200:
+                        for topic in topics_resp.get("values", []):
+                            if topic["id"] == topic_id:
+                                topic_name = topic.get("topic", {}).get("name")
+                                submission_title = topic["submission"]["submission_title"]
+                                if topic["comments"]:
+                                    comment = topic["comments"][0]["comment"]
+                notifications.append({
+                    "id": notif["id"], 
+                    "type": notif_type,
+                    "message": message,
+                    "topic_name": topic_name,
+                    "submission_title": submission_title,
+                    "comment": comment,
+                    "created_at": created_at,
+                    "is_read": is_read,
+                })
+
+            # Если преподаватель
+            elif role.lower() == "teacher":
+                if notif_type == "file_added":
+                    sub_id = entities.get("submission")
+                    topic_name = None
+                    submission_title = None
+                    file_name = None
+                    file_id = entities.get("file")
+                    user_profile_id = entities.get("user_profile")
+                    # можно использовать submission/{id}/topics чтобы узнать тему
+                    if sub_id:
+                        topics_resp, topics_status = fastapi_request(f"submission/{sub_id}/topics", method="GET", use_query_params=True)
+                        if topics_status == 200:
+                            topics = topics_resp.get("values", [])
+                            if topics:
+                                topic = topics[0]
+                                topic_name = topic.get("topic", {}).get("name")
+                                submission_title = topic["submission"]["submission_title"]
+                                if topic["files"]:
+                                    file_name = topic["files"][0]["original_filename"]
+                                    student_id = topic.get("submission", {}).get("student_id")
+                                    student_full_name = None
+
+                                    if student_id:
+                                        student_resp, student_status = fastapi_request(f"user/{student_id}/info", method="GET", use_query_params=True)
+                                        if student_status == 200:
+                                            sdata = student_resp.get("data", {})
+                                            first = sdata.get("first_name", "")
+                                            last = sdata.get("last_name", "")
+                                            middle = sdata.get("middle_name", "")
+                                            student_full_name = f"{last} {first} {middle}".strip()
+
+                    notifications.append({
+                        "id": notif["id"],  
+                        "created_at": notif["created_at"],
+                        "is_read": notif["is_read"],
+                        "topic_name": topic_name,
+                        "submission_title": submission_title,
+                        "type": notif_type,
+                        "student_full_name": student_full_name,
+                         "file_name": file_name,
+                         "message": f"Студент {student_full_name} загрузил файл по теме вашей работы" if student_full_name else None
+                    })
+
+    return render(request, 'users/notifications.html', context = {"notifications": notifications, 'user_id': user_id, "data": response_data, "role": role})
+

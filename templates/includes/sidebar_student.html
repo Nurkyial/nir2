@@ -57,20 +57,15 @@
         </svg>
         Мои работы</a
       >
-      <ul class="nav-group-items">
-        {% for submission in submissions %}
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            href="{% url 'research-work-detail' rw_id=submission.research_work.id subm_id=submission.id %}"
-            ><span class="nav-icon"></span>{{submission.research_work.name}} -
-            Сем.{{submission.semester}}</a
-          >
-        </li>
-
-
-        {% endfor %}
-      </ul>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'notifications' %}">
+        <svg class="nav-icon">
+          <use xlink:href="/static/assets/free.svg#cil-bell"></use>
+        </svg>
+        Уведомления
+      </a>
+    </li>
+      
     </li>
 
     <li class="nav-item">

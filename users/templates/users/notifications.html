@@ -1,0 +1,48 @@
+{% extends "main.html" %}
+{% block content %}
+<div class="body flex-grow-1 px-3">
+  <div class="container-lg">
+    <div class="card mb-4">
+      <div class="card-header">
+        <strong>Уведомления</strong>
+      </div>
+      <div class="card-body">
+        {% if notifications %}
+          <ul class="list-group">
+            {% for n in notifications %}
+            <li id="notif-{{ n.id }}" class="list-group-item
+              {% if n.type == 'submission_declined' %}list-group-item-danger
+              {% elif n.type == 'submission_accepted' %}list-group-item-success
+              {% elif not n.is_read %}list-group-item-warning
+              {% endif %}">
+                  {% if role == "Teacher" and n.student_full_name %}
+                    <strong>Студент <u>{{ n.student_full_name }}</u> загрузил файл по теме вашей работы</strong><br>
+                  {% elif role == "Student" and n.message %}
+                    <strong>{{ n.message }}</strong><br>
+                  {% endif %}
+
+                  {% if n.submission_title %}
+                    <div><strong>Тема работы:</strong> {{ n.submission_title }}</div>
+                  {% endif %}
+                  {% if n.topic_name %}
+                    <div><strong>Раздел:</strong> {{ n.topic_name }}</div>
+                  {% endif %}
+                  {% if n.comment %}
+                    <div><strong>Комментарий:</strong> {{ n.comment }}</div>
+                  {% endif %}
+                  {% if n.file_name %}
+                    <div><strong>Файл:</strong> {{ n.file_name }}</div>
+                  {% endif %}
+
+                  <small class="text-muted">{{ n.created_at|date:"d.m.Y H:i" }}</small>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Нет уведомлений</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
