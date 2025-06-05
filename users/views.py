@@ -1067,15 +1067,9 @@ def show_statistics(request):
         return redirect('login')
     
     students_without_teacher = []
-    response_user_info_cache_key = f'user_{user_id}_info'
-    status_code_user_info_cache_key = f'user_{user_id}_info_status_code'
-    response = cache.get(response_user_info_cache_key)
-    status_code = cache.get(status_code_user_info_cache_key)
-    if not response:
-        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
-        cache.set(response_user_info_cache_key, response, 60*60)
-        cache.set(status_code_user_info_cache_key, status_code, 60*60)
-
+ 
+    response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        
     response_data = response.get("data", {})
     role = response_data.get("role", None) 
     print(f"user_id in statistics = {user_id} and role = {role}")
@@ -1087,11 +1081,10 @@ def show_statistics(request):
         5: 'Летняя практика'
     } # пока что так, когда появится ручка, нужно ее заменить
 
-    all_students = cache.get("all_students")
-    if not all_students:
-        response, status_code = fastapi_request('user/all-students', method='GET')
-        all_students = response.get('values', [])
-        cache.set("all_students", all_students, 60*30)
+
+    response, status_code = fastapi_request('user/all-students', method='GET')
+    all_students = response.get('values', [])
+
     # student_name, teacher_name, group, research_work, name_of_work, semester, topics (arrows), teacher_comment
     data = cache.get(f"statistics_user_{user_id}")
     if not data:
@@ -1389,3 +1382,25 @@ def notifications(request):
 
     return render(request, 'users/notifications.html', context = {"notifications": notifications, 'user_id': user_id, "data": response_data, "role": role})
 
+
+
+from django.core.cache import cache
+from django.contrib import messages 
+
+def get_or_update_user_cache(user_id: str):
+    """
+    Возвращает (user_data, status_code) из кэша или FastAPI.
+    Если данных нет в кэше, делает запрос и сохраняет результат.
+    """
+    response_cache_key = f'user_{user_id}_info'
+    status_cache_key = f'user_{user_id}_info_status_code'
+
+    response = cache.get(response_cache_key)
+    status_code = cache.get(status_cache_key)
+
+    if not response or status_code != 200:
+        response, status_code = fastapi_request(f"user/{user_id}/info", method="GET", use_query_params=True)
+        cache.set(response_cache_key, response, 60 * 60)
+        cache.set(status_cache_key, status_code, 60 * 60)
+
+    return response, status_code
